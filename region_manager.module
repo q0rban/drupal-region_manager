@@ -1,0 +1,75 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ *   Adds add/remove block controls to select regions.
+ */
+
+/**
+ * Implementation of hook_init().
+ */
+function region_manager_init() {
+  if (user_access('manage regions')) {
+    // Add css and js.
+    $path = drupal_get_path('module', 'region_manager');
+    drupal_add_css($path .'/region_manager.css');
+    drupal_add_js($path .'/region_manager.js');
+
+    // Add the menus.
+    foreach(variable_get('region_manager_regions', array()) as $region) {
+      if ($region) {
+        //$menu = region_manager_region_menu($region);
+        drupal_set_content($region, 'hi');
+      }
+    }
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function region_manager_menu() {
+  $items = array();
+
+  $items['admin/settings/region_manager'] = array(
+    'title' => 'Region Manager',
+    'description' => 'Configure region manager settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('region_manager_settings_form'),
+    'access arguments' => array('administer '),
+  );
+
+  return $items;
+}
+
+/**
+ * Returns a menu for the associated region.
+ */
+function region_manager_region_menu($region) {
+  
+}
+
+/**
+ * Configuration settings form.
+ */
+function region_manager_settings_form() {
+  global $theme;
+  $form = array();
+
+  init_theme();
+
+  $form['region_manager_regions'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Region manager regions'),
+    '#default_value' => variable_get('region_manager_regions', array()),
+    '#options' => system_region_list($theme),
+  );
+
+  $form = system_settings_form($form);
+
+  // Uncomment and update the callback to override the default system settings submit handler.
+  // $form['submit'] = array('region_manager_settings_form_submit');
+
+  return $form;
+}

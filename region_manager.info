@@ -1,0 +1,5 @@
+; $Id$
+name = Region Manager
+description = Implements 'add new' block controls to select regions.
+; dependencies[] = 
+core = 6.x
