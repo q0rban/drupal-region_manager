@@ -1,0 +1,73 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Install file for database schema
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function region_manager_install() {
+  drupal_install_schema('region_manager');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function region_manager_schema() {
+  $schema = array();
+
+  $schema['region_manager_blocks'] = array(
+    'description' => 'Disables {blocks} per region.',
+    'fields' => array(
+      'bid' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique region_manager ID.',
+      ),
+      'theme' => array(
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The theme under which the block settings apply.',
+      ),
+      'region' => array(
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Theme region within which the block is set.',
+      ),
+      'module' => array(
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => "The module from which the block originates; for example, 'user' for the Who's Online block, and 'block' for any custom {blocks}.",
+      ),
+      'delta' => array(
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '0',
+        'description' => 'Unique ID for block within a module.',
+      ),
+    ),
+    'primary key' => array('bid'),
+    'unique keys' => array(
+      'trmd' => array('theme', 'region', 'module', 'delta'),
+    ),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function region_manager_uninstall() {
+  drupal_uninstall_schema('region_manager');
+}

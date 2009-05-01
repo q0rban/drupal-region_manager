@@ -7,6 +7,16 @@
  */
 
 /**
+ * Implementation of hook_help().
+ */
+function region_manager_help($path, $arg) {
+  switch ($path) {
+    case 'admin/settings/region_manager':
+      return t('Please select for each theme which regions you would like to have region manager available on.');
+  }
+}
+
+/**
  * Implementation of hook_init().
  */
 function region_manager_init() {
@@ -17,10 +27,12 @@ function region_manager_init() {
     drupal_add_js($path .'/region_manager.js');
 
     // Add the menus.
-    foreach(variable_get('region_manager_regions', array()) as $region) {
-      if ($region) {
-        //$menu = region_manager_region_menu($region);
-        drupal_set_content($region, 'hi');
+    foreach(variable_get('region_manager_regions', array()) as $theme) {
+      foreach($theme as $region => $value) {
+        if ($value) {
+          //$menu = region_manager_region_menu($region);
+          //drupal_set_content($region, 'hi');
+        }
       }
     }
   }
@@ -33,14 +45,68 @@ function region_manager_menu() {
   $items = array();
 
   $items['admin/settings/region_manager'] = array(
-    'title' => 'Region Manager',
+    'title' => 'Region Manager regions',
     'description' => 'Configure region manager settings',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('region_manager_settings_form'),
-    'access arguments' => array('administer '),
+    'page arguments' => array('region_manager_regions_form'),
+    'access arguments' => array('administer region manager'),
+    'file' => 'region_manager.admin.inc',
+  );
+  $items['admin/settings/region_manager/regions'] = array(
+    'title' => 'Regions',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+
+  foreach(list_themes() as $theme) {
+    if ($theme->status) {
+      $items['admin/settings/region_manager/'. $theme->name] = array(
+        'title' => $theme->info['name'],
+        'description' => 'Configure region manager settings',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('region_manager_blocks_form', 3),
+        'access arguments' => array('administer region manager'),
+        'file' => 'region_manager.admin.inc',
+        'type' => MENU_LOCAL_TASK,
+      );
+    }
+  }
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function region_manager_perm() {
+  return array('administer region manager');
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function region_manager_theme() {
+  $items = array();
+
+  $items['region_manager_blocks_form'] = array(
+    'arguments' => array('form' => array()),
   );
 
   return $items;
+}
+
+/**
+ * Get a list of available regions from a specified theme.
+ *
+ * @param $theme_key
+ *   The name of a theme.
+ * @return
+ *   An array of regions in the form $region['name'] = 'description'.
+ */
+function region_manager_region_list($theme_key) {
+  $settings = variable_get('region_manager_regions', array());
+  $regions = system_region_list($theme_key);
+  return array_intersect_key($regions, array_filter($settings[$theme_key]));
 }
 
 /**
@@ -51,25 +117,90 @@ function region_manager_region_menu($region) {
 }
 
 /**
- * Configuration settings form.
+ * Loader function for individual records.
+ *
+ * Because we use '%region_manager_blocks_theme' as a wildcard in our hook_menu()
+ * handler, this function will also be called automatically when we go to edit
+ * or delete a record. Thanks, Menu API!.
+ *
+ * @param $theme_key
+ *   A string containing the theme key.
+ * @return
+ *   A single record in array format, or FALSE if none matched the incoming ID.
  */
-function region_manager_settings_form() {
-  global $theme;
-  $form = array();
+function region_manager_blocks_theme_load($theme_key) {
+  $regions = array();
 
-  init_theme();
+  $sql = "SELECT * FROM {region_manager_blocks} WHERE theme = '%s'";
+  $result = db_query($sql, $theme_key);
+  while ($region = db_fetch_array($result)) {
+    $regions[$region['region']][] = $region['block'] .'_'. $region['delta'];
+  }
 
-  $form['region_manager_regions'] = array(
-    '#type' => 'checkboxes',
-    '#title' => t('Region manager regions'),
-    '#default_value' => variable_get('region_manager_regions', array()),
-    '#options' => system_region_list($theme),
-  );
+  return $regions;
+}
 
-  $form = system_settings_form($form);
+/**
+ * Public loader function for the full collection of records.
+ *
+ * In situations where the module's data rarely changes, or is being used
+ * frequently (for example, loaded and processed on every page load), this
+ * is a prime candidate for caching. See The Beginner's Guide to Caching at
+ * http://www.lullabot.com/articles/a_beginners_guide_to_caching_data for more
+ * details.
+ *
+ * This function assumes that results should be sorted by 'weight' -- if your
+ * module doesn't store a weight column on its records, or if you need to sort
+ * on some other property, this function's SQL should be updated as well.
+ *
+ * @return
+ *   An array of all records, keyed by id.
+ */
+function region_manager_blocks_load_all() {
+  $sql = 'SELECT * FROM {region_manager_blocks} ORDER BY theme ASC';
+  $result = db_query($sql);
 
-  // Uncomment and update the callback to override the default system settings submit handler.
-  // $form['submit'] = array('region_manager_settings_form_submit');
+  $regions = array();
+  while ($region = db_fetch_array($result)) {
+    $regions[$region['bid']] = $region;
+  }
+  return $regions;
+}
 
-  return $form;
+/**
+ * Inserts a new record, or updates an existing one.
+ *
+ * Automatically inserts or updates, based on whether the record's unique ID has
+ * been set yet. Because drupal_write_record() updates the record itself (adding
+ * the unique ID after the database has been updated), we return the record
+ * after saving it.
+ *
+ * This allows any calling function to check the id of the returned record and
+ * act on the ID as needed (redirecting to a 'view' page after inserting, etc).
+ *
+ * @param $region
+ *   A record to be saved. If $region['bid'] is set, the record will be updated.
+ *   Otherwise, a new record will be inserted into the database.
+ * @return
+ *   The saved record, with its ID set.
+ */
+function region_manager_record_save($region) {
+  if (isset($region['bid'])) {
+    drupal_write_record('region_manager_blocks', $region, 'bid');
+  }
+  else {
+    drupal_write_record('region_manager_blocks', $region);
+  }
+  return $region;
+}
+
+/**
+ * Deletes a record, given its unique ID.
+ *
+ * @param $region_id
+ *   An int containing the ID of a record.
+ */
+function region_manager_record_delete($region_id) {
+  $sql = 'DELETE FROM {region_manager_blocks} WHERE bid = %d';
+  db_query($sql, $region_id);
 }
