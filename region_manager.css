@@ -1,1 +1,9 @@
 /* $Id$ */
+
+#region-manager-blocks-form tr.module td {
+  border-top: 1.5em solid #fff;
+  border-bottom: 1px solid #b4d7f0;
+  background-color: #d4e7f3;
+  color: #455067;
+  font-weight: bold;
+}

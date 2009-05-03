@@ -19,47 +19,24 @@ function region_manager_install() {
 function region_manager_schema() {
   $schema = array();
 
-  $schema['region_manager_blocks'] = array(
-    'description' => 'Disables {blocks} per region.',
+  $schema['region_manager_regions'] = array(
+    'description' => 'Describes {blocks} access per region.',
     'fields' => array(
-      'bid' => array(
-        'type' => 'serial',
-        'not null' => TRUE,
-        'description' => 'Primary Key: Unique region_manager ID.',
-      ),
-      'theme' => array(
+      'rid' => array(
         'type' => 'varchar',
         'length' => 64,
-        'not null' => TRUE,
-        'default' => '',
-        'description' => 'The theme under which the block settings apply.',
-      ),
-      'region' => array(
-        'type' => 'varchar',
-        'length' => 64,
-        'not null' => TRUE,
-        'default' => '',
-        'description' => 'Theme region within which the block is set.',
-      ),
-      'module' => array(
-        'type' => 'varchar',
-        'length' => 64,
-        'not null' => TRUE,
-        'default' => '',
-        'description' => "The module from which the block originates; for example, 'user' for the Who's Online block, and 'block' for any custom {blocks}.",
-      ),
-      'delta' => array(
-        'type' => 'varchar',
-        'length' => 32,
         'not null' => TRUE,
         'default' => '0',
-        'description' => 'Unique ID for block within a module.',
+        'description' => 'A region ID, defined by the theme key and region.',
+      ),
+      'blocked_blocks' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'big',
+        'description' => "List of blocks that are disallowed for this region.",
       ),
     ),
-    'primary key' => array('bid'),
-    'unique keys' => array(
-      'trmd' => array('theme', 'region', 'module', 'delta'),
-    ),
+    'primary key' => array('rid'),
   );
 
   return $schema;

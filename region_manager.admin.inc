@@ -55,30 +55,50 @@ function region_manager_blocks_form(&$form_state, $theme_key) {
  
   $roles = user_roles();
   $regions = region_manager_region_list($theme_key);
-  $disabled = region_manager_blocks_theme_load($theme_key);
+  $disabled = region_manager_regions_load($theme_key);
+
+  if (empty($regions)) {
+    drupal_set_message(t('You must first enable some regions for this theme <a href="!href">here</a>.', array('!href' => 'admin/settings/region_manager')), 'error');
+    return array();
+  }
 
   $form['#theme_key'] = $theme_key;
   $form['blocks']['#tree'] = TRUE;
 
-  foreach(_region_manager_block_rehash($theme_key) as $module => $blocks) {
-    $all_blocks = array('all_blocks' => array('info' => t('all @module blocks', array('@module' => $module))));
-    $blocks = $all_blocks + $blocks;
+  $blocks_form = array('#tree' => TRUE);
 
-    foreach($blocks as $delta => $block) {
-
-      // Store the block name in a separate form.
-      $key = $module .'_'. $delta;
-      $form['block_names'][$key] = array(
+  foreach(array_keys($regions) as $region) {
+    $form[$region]['#tree'] = TRUE;
+    foreach(_region_manager_block_rehash($theme_key) as $module => $blocks) {
+  
+      $form['blocks']['block_names'][$module] = array(
         '#type' => 'markup',
-        '#value' => $block['info'],
+        '#value' => t('all @module blocks', array('@module' => $module)),
+      );
+  
+      $form['blocks'][$region][$module] = array(
+        '#type' => 'select',
+        '#default_value' => 1, // @todo: have this load the val from the table.
+        '#options' => array(
+          REGION_MANAGER_ALL_ENABLED => t('All enabled'),
+          REGION_MANAGER_ALL_DISABLED => t('All disabled'),
+          REGION_MANAGER_CUSTOM => t('Custom per block'),
+        ),
       );
 
-      $form['blocks'][$module][$delta]['#tree'] = TRUE;
-      foreach(array_keys($regions) as $region) {
-        $form['blocks'][$module][$delta][$region] = array(
+      $disabled = ($form['blocks'][$region][$module]['#default_value'] != REGION_MANAGER_CUSTOM);
+      foreach($blocks as $delta => $block) { 
+        // Store the block name in a separate form.
+        $key = $module .':'. $delta;
+        $form['blocks']['block_names'][$key] = array(
+          '#type' => 'markup',
+          '#value' => $block['info'],
+        );
+  
+        $form['blocks'][$region][$key] = array(
           '#type' => 'checkbox',
           '#default_value' => !in_array($key, (array) $disabled[$region]),
-          '#disabled' => (isset($form['blocks'][$module]['all_blocks'][$region]) && $form['blocks'][$module]['all_blocks'][$region]['#default_value']),
+          '#disabled' => $disabled,
         );
       }
     }
@@ -94,7 +114,7 @@ function region_manager_blocks_form(&$form_state, $theme_key) {
  * Submit handler for region_manager_blocks_form
  */
 function region_manager_blocks_form_submit($form, &$form_state) {
-  $blocks = $form_state['values']['blocks'];
+  $regions = $form_state['values']['blocks'];
   $theme_key = $form['#theme_key'];
 
   ob_start();
@@ -102,32 +122,17 @@ function region_manager_blocks_form_submit($form, &$form_state) {
   drupal_set_message(ob_get_contents());
   ob_end_clean();
 
-  foreach($blocks as $module => $blocks) {
-    foreach($blocks as $delta => $regions) {
-      $all = array;
-      foreach($regions as $region => $value) {
-        if ($delta == 'all_blocks') {
-          if ($value) {
-            // Delete all blocks for this module and region.
-          }
-          else {
-            // Add all blocks for this module and region.
-          }
-        }
-        elseif ($value) {
-          // Delete block $delta for this region.
-        }
-        else {
-          // Disable this block for this region by adding it to our disabled blocks table.
-        }
+  foreach($regions as $region => $blocks) {
+    foreach($blocks as $key => $value) {
+      list($module, $delta) = explode(':', $key);
+      if (!isset($delta)) {
+      
+      }
+      else {
+      
       }
     }
   }
-
-
-  //foreach ($blocks as $key => $regions) {
-    //foreach($regions)
-  //}
 
   drupal_set_message(t('The changes have been saved.'));
 }
@@ -138,6 +143,9 @@ function region_manager_blocks_form_submit($form, &$form_state) {
  * @ingroup themeable
  */
 function theme_region_manager_blocks_form($form) {
+  if (empty($form['blocks'])) {
+    return;
+  }
   $output = '';
 
   $regions = region_manager_region_list($form['#theme_key']);
@@ -148,26 +156,24 @@ function theme_region_manager_blocks_form($form) {
     $header[] = $title;
   }
  
-  foreach(element_children($form['blocks']) as $module) {
-    $rows = array();
-    foreach(element_children($form['blocks'][$module]) as $delta) {
-      $row = array();
-      $row[] = drupal_render($form['block_names'][$module .'_'. $delta]);
-      foreach(element_children($form['blocks'][$module][$delta]) as $region) {
-        $data = drupal_render($form['blocks'][$module][$delta][$region]);
-        $classes = 'region_manager_module-'. $module .' region_manager_region-'. $region;
-        $row[] = array('data' => $data, 'class' => $classes);
-      }
-      if ($delta == 'all_blocks') {
-        $rows[] = array('data' => $row, 'class' => 'module');
-      }
-      else {
-        $rows[] = $row;
+  foreach(element_children($form['blocks']) as $region) {
+    foreach(element_children($form['blocks'][$region]) as $key) {
+      list($module, $delta) = explode(':', $key);
+      $data = drupal_render($form['blocks'][$region][$key]);
+      $classes = 'region_manager_module-'. $module .' region_manager_region-'. $region;
+      $rows[$key]['data'][$region] = array('data' => $data, 'class' => $classes);
+      if (!isset($rows[$key]['class'])) {
+        if (isset($delta)) {
+          $rows[$key]['class'] = $module .'-child block';
+        }
+        else {
+          $rows[$key]['class'] = $module .' module';
+        }
       }
     }
-    $output .= theme('table', $header, $rows, array('id' => 'regionmanager-regions-'. $module));
   }
 
+  $output .= theme('table', $header, $rows, array('id' => 'regionmanager-regions'));
   $output .= drupal_render($form);
  
   return $output;

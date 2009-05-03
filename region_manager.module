@@ -7,6 +7,14 @@
  */
 
 /**
+ * Define static block permission states
+ */
+
+define('REGION_MANAGER_ALL_DISABLED', 0);
+define('REGION_MANAGER_ALL_ENABLED', 1);
+define('REGION_MANAGER_CUSTOM', 2);
+
+/**
  * Implementation of hook_help().
  */
 function region_manager_help($path, $arg) {
@@ -106,7 +114,9 @@ function region_manager_theme() {
 function region_manager_region_list($theme_key) {
   $settings = variable_get('region_manager_regions', array());
   $regions = system_region_list($theme_key);
-  return array_intersect_key($regions, array_filter($settings[$theme_key]));
+  if (!empty($settings)) {
+    return array_intersect_key($regions, (array) array_filter($settings[$theme_key]));
+  }
 }
 
 /**
@@ -124,15 +134,16 @@ function region_manager_region_menu($region) {
  * or delete a record. Thanks, Menu API!.
  *
  * @param $theme_key
- *   A string containing the theme key.
+ *   A string containing either a theme key only, or theme key and region name
+ *   concatenated.
  * @return
  *   A single record in array format, or FALSE if none matched the incoming ID.
  */
-function region_manager_blocks_theme_load($theme_key) {
+function region_manager_regions_theme_load($rid) {
   $regions = array();
 
-  $sql = "SELECT * FROM {region_manager_blocks} WHERE theme = '%s'";
-  $result = db_query($sql, $theme_key);
+  $sql = "SELECT * FROM {region_manager_blocks} WHERE rid LIKE '%s%%'";
+  $result = db_query($sql, $rid);
   while ($region = db_fetch_array($result)) {
     $regions[$region['region']][] = $region['block'] .'_'. $region['delta'];
   }
@@ -156,7 +167,7 @@ function region_manager_blocks_theme_load($theme_key) {
  * @return
  *   An array of all records, keyed by id.
  */
-function region_manager_blocks_load_all() {
+function region_manager_regions_load_all() {
   $sql = 'SELECT * FROM {region_manager_blocks} ORDER BY theme ASC';
   $result = db_query($sql);
 
@@ -184,7 +195,7 @@ function region_manager_blocks_load_all() {
  * @return
  *   The saved record, with its ID set.
  */
-function region_manager_record_save($region) {
+function region_manager_region_save($region) {
   if (isset($region['bid'])) {
     drupal_write_record('region_manager_blocks', $region, 'bid');
   }
@@ -200,7 +211,7 @@ function region_manager_record_save($region) {
  * @param $region_id
  *   An int containing the ID of a record.
  */
-function region_manager_record_delete($region_id) {
+function region_manager_region_delete($region_id) {
   $sql = 'DELETE FROM {region_manager_blocks} WHERE bid = %d';
   db_query($sql, $region_id);
 }
