@@ -52,10 +52,10 @@ function region_manager_regions_form() {
  */
 function region_manager_blocks_form(&$form_state, $theme_key) {
   $form = array();
- 
+
   $roles = user_roles();
   $regions = region_manager_region_list($theme_key);
-  $disabled = region_manager_regions_load($theme_key);
+  $records = region_manager_regions_load($theme_key);
 
   if (empty($regions)) {
     drupal_set_message(t('You must first enable some regions for this theme <a href="!href">here</a>.', array('!href' => 'admin/settings/region_manager')), 'error');
@@ -63,22 +63,27 @@ function region_manager_blocks_form(&$form_state, $theme_key) {
   }
 
   $form['#theme_key'] = $theme_key;
-  $form['blocks']['#tree'] = TRUE;
+  $form['blocked_blocks']['#tree'] = TRUE;
 
-  $blocks_form = array('#tree' => TRUE);
+  $form['regions']['#tree'] = TRUE;
 
   foreach(array_keys($regions) as $region) {
-    $form[$region]['#tree'] = TRUE;
+    // rid is the theme key and region delimited by a colon.
+    $rid = $theme_key .':'. $region;
+
+    // Now build each module form.
     foreach(_region_manager_block_rehash($theme_key) as $module => $blocks) {
-  
-      $form['blocks']['block_names'][$module] = array(
+
+      // Add the label for this module to the block_names column.
+      $form['regions']['block_names']['modules'][$module] = array(
         '#type' => 'markup',
         '#value' => t('all @module blocks', array('@module' => $module)),
       );
-  
-      $form['blocks'][$region][$module] = array(
+
+      // The select box for the module.
+      $form['regions'][$region]['modules'][$module] = array(
         '#type' => 'select',
-        '#default_value' => 1, // @todo: have this load the val from the table.
+        '#default_value' => isset($records[$rid]['modules'][$module]) ? $records[$rid]['modules'][$module] : REGION_MANAGER_ALL_ENABLED,
         '#options' => array(
           REGION_MANAGER_ALL_ENABLED => t('All enabled'),
           REGION_MANAGER_ALL_DISABLED => t('All disabled'),
@@ -86,26 +91,35 @@ function region_manager_blocks_form(&$form_state, $theme_key) {
         ),
       );
 
-      $disabled = ($form['blocks'][$region][$module]['#default_value'] != REGION_MANAGER_CUSTOM);
-      foreach($blocks as $delta => $block) { 
-        // Store the block name in a separate form.
+      // Whether or not the checkboxes for this region should be disabled.
+      $disabled = ($form['regions'][$region]['modules'][$module]['#default_value'] != REGION_MANAGER_CUSTOM);
+
+      // Now, build the checkboxes for each blocks.
+      foreach($blocks as $delta => $block) {
+        // Add the label for this block to the block_names column.
         $key = $module .':'. $delta;
-        $form['blocks']['block_names'][$key] = array(
+        $form['regions']['block_names']['blocked_blocks'][$module][$delta] = array(
           '#type' => 'markup',
           '#value' => $block['info'],
         );
-  
-        $form['blocks'][$region][$key] = array(
+
+        // The checkbox for the block.
+        $form['regions'][$region]['blocked_blocks'][$module][$delta] = array(
           '#type' => 'checkbox',
-          '#default_value' => !in_array($key, (array) $disabled[$region]),
+          '#default_value' => !in_array($key, (array) $records[$rid]['blocked_blocks']),
           '#disabled' => $disabled,
         );
+
+        // Set tree to TRUE.
+        $form['regions'][$region]['blocked_blocks'][$module]['#tree'] = $form['regions'][$region]['blocked_blocks'][$module][$delta]['#tree'] = TRUE;
       }
     }
+    // Set tree to true for these arrays.
+    $form['regions'][$region]['#tree'] = $form['regions'][$region]['modules']['#tree'] = TRUE;
   }
 
   $form['submit'] = array('#type' => 'submit', '#value' => t('Submit'));
- 
+
   return $form;
 }
  
@@ -114,24 +128,46 @@ function region_manager_blocks_form(&$form_state, $theme_key) {
  * Submit handler for region_manager_blocks_form
  */
 function region_manager_blocks_form_submit($form, &$form_state) {
-  $regions = $form_state['values']['blocks'];
+  $regions = $form_state['values']['regions'];
   $theme_key = $form['#theme_key'];
 
-  ob_start();
-  print_r($blocks);
-  drupal_set_message(ob_get_contents());
-  ob_end_clean();
+  foreach($regions as $region => $record) {
+    // Set the rid for this record.
+    $record['rid'] = $theme_key .':'. $region;
 
-  foreach($regions as $region => $blocks) {
-    foreach($blocks as $key => $value) {
-      list($module, $delta) = explode(':', $key);
-      if (!isset($delta)) {
-      
+    // Now go through the modules.
+    foreach($record['modules'] as $module => $module_val) {
+      foreach($record['blocked_blocks'][$module] as $delta => $block_val) {
+        // We were using the [module][delta] structure to ease in theming, but we
+        // need it to be set with just a module:delta key, so let's do that now.
+        $key = $module .':'. $delta;
+        $record['blocked_blocks'][$key] = $block_val;
+
+        // Now we switch through the $module_val to determine what needs to be done.
+        switch($module_val) {
+          case REGION_MANAGER_ALL_ENABLED:
+            // All are enabled, so unset all.
+            unset($record['blocked_blocks'][$key]);
+            break;
+
+          case REGION_MANAGER_CUSTOM:
+            // We don't want to save the checked blocks, only unchecked blocks.
+            if ($block_val) {
+              unset($record['blocked_blocks'][$key]);
+            }
+            break;
+
+          case REGION_MANAGER_ALL_DISABLED:
+            // Nothing to do here, since we want all of them.
+            break;
+        }
       }
-      else {
-      
-      }
+      // Unset this module's array since we resaved using the module:delta format.
+      unset($record['blocked_blocks'][$module]);
     }
+    // Flip the array, as all we need are the keys at this point.
+    $record['blocked_blocks'] = implode(', ', array_keys($record['blocked_blocks']));
+    region_manager_region_save($record);
   }
 
   drupal_set_message(t('The changes have been saved.'));
@@ -143,7 +179,7 @@ function region_manager_blocks_form_submit($form, &$form_state) {
  * @ingroup themeable
  */
 function theme_region_manager_blocks_form($form) {
-  if (empty($form['blocks'])) {
+  if (empty($form['blocked_blocks'])) {
     return;
   }
   $output = '';
@@ -156,18 +192,21 @@ function theme_region_manager_blocks_form($form) {
     $header[] = $title;
   }
  
-  foreach(element_children($form['blocks']) as $region) {
-    foreach(element_children($form['blocks'][$region]) as $key) {
-      list($module, $delta) = explode(':', $key);
-      $data = drupal_render($form['blocks'][$region][$key]);
+  foreach(element_children($form['regions']) as $region) {
+    foreach(element_children($form['regions'][$region]['modules']) as $module) {
+      $data = drupal_render($form['regions'][$region]['modules'][$module]);
       $classes = 'region_manager_module-'. $module .' region_manager_region-'. $region;
-      $rows[$key]['data'][$region] = array('data' => $data, 'class' => $classes);
-      if (!isset($rows[$key]['class'])) {
-        if (isset($delta)) {
+      $rows[$module]['data'][$region] = array('data' => $data, 'class' => $classes);
+      if (!isset($rows[$module]['class'])) {
+        $rows[$module]['class'] = $module .' module';
+      }
+      foreach(element_children($form['regions'][$region]['blocked_blocks'][$module]) as $delta) {
+        $key = $module .':'. $delta;
+        $data = drupal_render($form['regions'][$region]['blocked_blocks'][$module][$delta]);
+        $classes = 'region_manager_module-'. $module .' region_manager_region-'. $region;
+        $rows[$key]['data'][$region] = array('data' => $data, 'class' => $classes);
+        if (!isset($rows[$key]['class'])) {
           $rows[$key]['class'] = $module .'-child block';
-        }
-        else {
-          $rows[$key]['class'] = $module .' module';
         }
       }
     }

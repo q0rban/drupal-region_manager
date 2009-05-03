@@ -35,6 +35,13 @@ function region_manager_schema() {
         'size' => 'big',
         'description' => "List of blocks that are disallowed for this region.",
       ),
+      'modules' => array(
+        'type' => 'text',
+        'size' => 'big',
+        'description' => 'A serialized array of module settings for this region.',
+        'serialize' => TRUE,
+        'serialized default' => 'a:0:{}',
+      ),
     ),
     'primary key' => array('rid'),
   );

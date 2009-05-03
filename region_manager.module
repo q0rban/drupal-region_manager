@@ -7,11 +7,10 @@
  */
 
 /**
- * Define static block permission states
+ * Define constant module permission states.
  */
-
-define('REGION_MANAGER_ALL_DISABLED', 0);
-define('REGION_MANAGER_ALL_ENABLED', 1);
+define('REGION_MANAGER_ALL_ENABLED', 0);
+define('REGION_MANAGER_ALL_DISABLED', 1);
 define('REGION_MANAGER_CUSTOM', 2);
 
 /**
@@ -127,25 +126,23 @@ function region_manager_region_menu($region) {
 }
 
 /**
- * Loader function for individual records.
- *
- * Because we use '%region_manager_blocks_theme' as a wildcard in our hook_menu()
- * handler, this function will also be called automatically when we go to edit
- * or delete a record. Thanks, Menu API!.
+ * Loader function for regions by theme or rid.
  *
  * @param $theme_key
  *   A string containing either a theme key only, or theme key and region name
- *   concatenated.
+ *   delimited by ':'.
  * @return
  *   A single record in array format, or FALSE if none matched the incoming ID.
  */
-function region_manager_regions_theme_load($rid) {
+function region_manager_regions_load($rid) {
   $regions = array();
 
-  $sql = "SELECT * FROM {region_manager_blocks} WHERE rid LIKE '%s%%'";
+  $sql = "SELECT * FROM {region_manager_regions} WHERE rid LIKE '%s%%'";
   $result = db_query($sql, $rid);
   while ($region = db_fetch_array($result)) {
-    $regions[$region['region']][] = $region['block'] .'_'. $region['delta'];
+    $region['modules'] = unserialize($region['modules']);
+    $region['blocked_blocks'] = explode(', ', $region['blocked_blocks']);
+    $regions[$region['rid']] = $region;
   }
 
   return $regions;
@@ -173,7 +170,8 @@ function region_manager_regions_load_all() {
 
   $regions = array();
   while ($region = db_fetch_array($result)) {
-    $regions[$region['bid']] = $region;
+    $region['modules'] = unserialize($region['modules']);
+    $regions[$region['rid']] = $region;
   }
   return $regions;
 }
@@ -181,37 +179,24 @@ function region_manager_regions_load_all() {
 /**
  * Inserts a new record, or updates an existing one.
  *
- * Automatically inserts or updates, based on whether the record's unique ID has
- * been set yet. Because drupal_write_record() updates the record itself (adding
- * the unique ID after the database has been updated), we return the record
- * after saving it.
- *
- * This allows any calling function to check the id of the returned record and
- * act on the ID as needed (redirecting to a 'view' page after inserting, etc).
- *
  * @param $region
- *   A record to be saved. If $region['bid'] is set, the record will be updated.
- *   Otherwise, a new record will be inserted into the database.
+ *   A record to be saved.
  * @return
- *   The saved record, with its ID set.
+ *   The saved record.
  */
 function region_manager_region_save($region) {
-  if (isset($region['bid'])) {
-    drupal_write_record('region_manager_blocks', $region, 'bid');
-  }
-  else {
-    drupal_write_record('region_manager_blocks', $region);
-  }
+  region_manager_region_delete($region['rid']);
+  drupal_write_record('region_manager_regions', $region);
   return $region;
 }
 
 /**
  * Deletes a record, given its unique ID.
  *
- * @param $region_id
- *   An int containing the ID of a record.
+ * @param $rid
+ *   A string containing the ID of a record.
  */
-function region_manager_region_delete($region_id) {
-  $sql = 'DELETE FROM {region_manager_blocks} WHERE bid = %d';
-  db_query($sql, $region_id);
+function region_manager_region_delete($rid) {
+  $sql = "DELETE FROM {region_manager_regions} WHERE rid = '%s'";
+  db_query($sql, $rid);
 }
