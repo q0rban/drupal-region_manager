@@ -28,17 +28,22 @@ function region_manager_help($path, $arg) {
  */
 function region_manager_init() {
   if (user_access('manage regions')) {
+    global $theme_key;
+
+    init_theme();
+
     // Add css and js.
     $path = drupal_get_path('module', 'region_manager');
     drupal_add_css($path .'/region_manager.css');
     drupal_add_js($path .'/region_manager.js');
 
     // Add the menus.
-    foreach(variable_get('region_manager_regions', array()) as $theme) {
-      foreach($theme as $region => $value) {
+    $regions = variable_get('region_manager_regions', array());
+    if (is_array($regions[$theme_key])) {
+      foreach($regions[$theme_key] as $region => $value) {
         if ($value) {
-          //$menu = region_manager_region_menu($region);
-          //drupal_set_content($region, 'hi');
+          $menu = region_manager_region_menu($theme_key, $region);
+          drupal_set_content($region, $menu);
         }
       }
     }
@@ -98,6 +103,12 @@ function region_manager_theme() {
   $items['region_manager_blocks_form'] = array(
     'arguments' => array('form' => array()),
   );
+  $items['region_manager_menu'] = array(
+    'arguments' => array('links' => array()),
+  );
+  $items['region_manager_menu_link'] = array(
+    'arguments' => array('title' => NULL, 'path' => NULL, 'options' => array()),
+  );
 
   return $items;
 }
@@ -121,8 +132,101 @@ function region_manager_region_list($theme_key) {
 /**
  * Returns a menu for the associated region.
  */
-function region_manager_region_menu($region) {
-  
+function region_manager_region_menu($theme_key, $region) {
+  static $blocks = NULL;
+  static $regions = NULL;
+
+  $existing = $links = array();
+  $rid = $theme_key .':'. $region;
+
+  // Load the blocks and regions if we haven't yet.
+  if (is_null($blocks)) {
+    $blocks = _region_manager_block_rehash($theme_key);
+  }
+  if (is_null($regions)) {
+    // Load all regions for this theme, so we don't have to reload for each region.
+    $regions = region_manager_regions_load($theme_key);
+  }
+
+  if (empty($blocks)) {
+    return;
+  }
+
+  $block_name = strtolower(variable_get('region_manager_block_name', 'Block'));
+  foreach($blocks as $module => $modblocks) {
+    if (is_array($modblocks)) {
+      switch($regions[$rid]['modules'][$module]) {
+        case REGION_MANAGER_ALL_DISABLED:
+          // If they're all disabled for this module, go on to the next module.
+          continue;
+
+        case REGION_MANAGER_CUSTOM:
+          foreach($modblocks as $delta => $block) {
+            $key = $module .':'. $delta;
+            if (!in_array($key, $regions[$rid]['blocked_blocks']) && $block['region'] == BLOCK_REGION_NONE) {
+              $existing[] = theme('region_manager_menu_link', $block['info'],"region_manager_ajax/$theme_key/$region/$module/$delta");
+            }
+          }
+          break;
+
+        default:
+          foreach($modblocks as $delta => $block) {
+            if ($block['region'] == BLOCK_REGION_NONE) {
+              $existing[] = theme('region_manager_menu_link', $block['info'],"region_manager_ajax/$theme_key/$region/$module/$delta");
+            }
+          }
+          // End default.
+      }
+    }
+    //if (!empty($existing[$module]['children'])) {
+      //$existing[$module]['data'] = t('@module @blocks', array('@module' => $module, '@block' => $block_name));
+    //}
+  }
+
+  $links['existing']['data'] = theme('region_manager_menu_link', t('Add existing'), drupal_get_destination());
+  $links['existing']['children'] = $existing;
+  return theme('region_manager_menu', $links);
+}
+
+/**
+ * Theme function that builds the menu from a set of links.
+ *
+ * @param $links
+ *   A multi-dimensional array tree of links.
+ *
+ * @return
+ *   A string containing the fully themed region manager menu.
+ *
+ * @ingroup themable
+ */
+function theme_region_manager_menu($links) {
+  $output = '<div class="region-manager-menu">';
+  $output .= theme('item_list', $links);
+  $output .= '</div>';
+  return $output;
+}
+
+/**
+ * Helper function to construct a single region manager menu link.
+ *
+ * @param $title
+ *   The link title.
+ * @param $path
+ *   The path or href of the link.
+ * @param $options
+ *   An array of options.
+ *
+ * @return
+ *   A string containing the link, processed by l().
+ */
+function theme_region_manager_menu_link($title, $path, $options = array()) {
+  $dest = drupal_get_destination();
+
+  if ($path != $dest && !isset($options['query']['destination'])) {
+    $options['query'] = array('destination' => drupal_get_destination());
+  }
+
+  return l($title, $path, $options);
 }
 
 /**
@@ -199,4 +303,34 @@ function region_manager_region_save($region) {
 function region_manager_region_delete($rid) {
   $sql = "DELETE FROM {region_manager_regions} WHERE rid = '%s'";
   db_query($sql, $rid);
+}
+
+/**
+ * Helper function to assemble the blocks 
+ */
+function _region_manager_block_rehash($theme_key) {
+  $blocks = array();
+
+  foreach (module_list() as $module) {
+    $module_blocks = module_invoke($module, 'block', 'list');
+    if ($module_blocks) {
+      foreach ($module_blocks as $delta => $block) {
+        $block['module'] = $module;
+        $block['delta']  = $delta;
+        $block['theme']  = $theme_key;
+        if (!isset($block['pages'])) {
+          // {block}.pages is type 'text', so it cannot have a
+          // default value, and not null, so we need to provide
+          // value if the module did not.
+          $block['pages']  = '';
+        }
+        // Set region to none if not enabled.
+        $block['region'] = $block['status'] ? $block['region'] : BLOCK_REGION_NONE;
+        // Add to the list of blocks we return.
+        $blocks[$module][$delta] = $block;
+      }
+    }
+  }
+
+  return $blocks;
 }

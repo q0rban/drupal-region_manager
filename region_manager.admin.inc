@@ -19,6 +19,13 @@ function region_manager_regions_form() {
   module_load_include('inc', 'system', 'system.admin');
   uasort($themes, 'system_sort_modules_by_info_name');
 
+  $form['region_manager_block_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('What should a "Block" be called?'),
+    '#description' => t('Please note: this only changes the name "Block" within the region manager UI, not throughout your Drupal site.'),
+    '#default_value' => variable_get('region_manager_block_name', 'Block'),
+  );
+
   $form['region_manager_regions']['#tree'] = TRUE;
 
   foreach($themes as $theme) {
@@ -216,35 +223,4 @@ function theme_region_manager_blocks_form($form) {
   $output .= drupal_render($form);
  
   return $output;
-}
-
-/**
- * Helper function to assemble the blocks 
- */
-function _region_manager_block_rehash($theme_key) {
-  // Valid region names for the theme.
-  $regions = region_manager_region_list($theme_key);
-
-  foreach (module_list() as $module) {
-    $module_blocks = module_invoke($module, 'block', 'list');
-    if ($module_blocks) {
-      foreach ($module_blocks as $delta => $block) {
-        $block['module'] = $module;
-        $block['delta']  = $delta;
-        $block['theme']  = $theme_key;
-        if (!isset($block['pages'])) {
-          // {block}.pages is type 'text', so it cannot have a
-          // default value, and not null, so we need to provide
-          // value if the module did not.
-          $block['pages']  = '';
-        }
-        // Set region to none if not enabled.
-        $block['region'] = $block['status'] ? $block['region'] : BLOCK_REGION_NONE;
-        // Add to the list of blocks we return.
-        $blocks[$module][$delta] = $block;
-      }
-    }
-  }
-
-  return $blocks;
 }
