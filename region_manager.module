@@ -84,14 +84,39 @@ function region_manager_menu() {
     }
   }
 
+  $items['admin/build/region_manager/%/%'] = array(
+    'title callback' => 'region_manager_region_title',
+    'title arguments' => array(3, 4),
+    'description' => 'Configure Region',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('region_manager_manage_form', 3, 4),
+    'access arguments' => array('manage regions'),
+    'file' => 'region_manager.pages.inc',
+    'type' => MENU_CALLBACK,
+  );
+
   return $items;
+}
+
+/**
+ * Title callback for a region manager.
+ */
+function region_manager_region_title($theme_key, $region) {
+  static $list = array();
+
+  if (!array_key_exists($theme_key, $list)) {
+    $info = unserialize(db_result(db_query("SELECT info FROM {system} WHERE type = 'theme' AND name = '%s'", $theme_key)));
+    $list[$theme_key] = array_map('t', $info['regions']);
+  }
+
+  return $list[$theme_key][$region];
 }
 
 /**
  * Implementation of hook_perm().
  */
 function region_manager_perm() {
-  return array('administer region manager');
+  return array('administer region manager', 'manage regions');
 }
 
 /**
@@ -308,28 +333,20 @@ function region_manager_region_delete($rid) {
 /**
  * Helper function to assemble the blocks 
  */
-function _region_manager_block_rehash($theme_key) {
+function _region_manager_block_rehash($theme_key, $region = NULL) {
   $blocks = array();
 
-  foreach (module_list() as $module) {
-    $module_blocks = module_invoke($module, 'block', 'list');
-    if ($module_blocks) {
-      foreach ($module_blocks as $delta => $block) {
-        $block['module'] = $module;
-        $block['delta']  = $delta;
-        $block['theme']  = $theme_key;
-        if (!isset($block['pages'])) {
-          // {block}.pages is type 'text', so it cannot have a
-          // default value, and not null, so we need to provide
-          // value if the module did not.
-          $block['pages']  = '';
-        }
-        // Set region to none if not enabled.
-        $block['region'] = $block['status'] ? $block['region'] : BLOCK_REGION_NONE;
-        // Add to the list of blocks we return.
-        $blocks[$module][$delta] = $block;
-      }
-    }
+  _block_rehash();
+
+  if (is_null($region)) {
+    $result = db_query("SELECT * FROM {blocks} WHERE theme = '%s'", $theme_key);
+  }
+  else {
+    $result = db_query("SELECT * FROM {blocks} WHERE theme = '%s' AND region = '%s'", $theme_key, $region);
+  }
+
+  while ($block = db_fetch_array($result)) {
+    $blocks[$block['module']][$block['delta']] = $block;
   }
 
   return $blocks;

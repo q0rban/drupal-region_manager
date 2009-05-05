@@ -35,10 +35,12 @@ blockCheckboxes = function(value, selector) {
   switch(value) {
     case '0':
       $(selector + ' input').not('[id*=all-blocks]').attr('checked', 1);
+      $(selector + ' input').not('[id*=all-blocks]').attr('disabled', 1);
       break;
 
     case '1':
       $(selector + ' input').not('[id*=all-blocks]').attr('checked', 0);
+      $(selector + ' input').not('[id*=all-blocks]').attr('disabled', 1);
       break;
 
     case '2':

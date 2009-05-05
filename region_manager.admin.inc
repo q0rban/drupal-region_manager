@@ -98,9 +98,6 @@ function region_manager_blocks_form(&$form_state, $theme_key) {
         ),
       );
 
-      // Whether or not the checkboxes for this region should be disabled.
-      $disabled = ($form['regions'][$region]['modules'][$module]['#default_value'] != REGION_MANAGER_CUSTOM);
-
       // Now, build the checkboxes for each blocks.
       foreach($blocks as $delta => $block) {
         // Add the label for this block to the block_names column.
@@ -114,7 +111,6 @@ function region_manager_blocks_form(&$form_state, $theme_key) {
         $form['regions'][$region]['blocked_blocks'][$module][$delta] = array(
           '#type' => 'checkbox',
           '#default_value' => !in_array($key, (array) $records[$rid]['blocked_blocks']),
-          '#disabled' => $disabled,
         );
 
         // Set tree to TRUE.
