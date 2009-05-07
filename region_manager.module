@@ -88,8 +88,8 @@ function region_manager_menu() {
     'title callback' => 'region_manager_region_title',
     'title arguments' => array(3, 4),
     'description' => 'Configure Region',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('region_manager_manage_form', 3, 4),
+    'page callback' => 'region_manager_manage',
+    'page arguments' => array(3, 4),
     'access arguments' => array('manage regions'),
     'file' => 'region_manager.pages.inc',
     'type' => MENU_CALLBACK,
@@ -134,6 +134,11 @@ function region_manager_theme() {
   $items['region_manager_menu_link'] = array(
     'arguments' => array('title' => NULL, 'path' => NULL, 'options' => array()),
   );
+  $items['region_manager_manage_form'] = array(
+    'template' => 'region-manager-manage-form',
+    'file' => 'region_manager.pages.inc',
+    'arguments' => array('form' => NULL),
+  );
 
   return $items;
 }
@@ -158,58 +163,28 @@ function region_manager_region_list($theme_key) {
  * Returns a menu for the associated region.
  */
 function region_manager_region_menu($theme_key, $region) {
-  static $blocks = NULL;
-  static $regions = NULL;
-
   $existing = $links = array();
-  $rid = $theme_key .':'. $region;
 
-  // Load the blocks and regions if we haven't yet.
-  if (is_null($blocks)) {
-    $blocks = _region_manager_block_rehash($theme_key);
-  }
-  if (is_null($regions)) {
-    // Load all regions for this theme, so we don't have to reload for each region.
-    $regions = region_manager_regions_load($theme_key);
-  }
+  $blocks = region_manager_blocks_load_all($theme_key);
 
-  if (empty($blocks)) {
-    return;
-  }
-
-  $block_name = strtolower(variable_get('region_manager_block_name', 'Block'));
-  foreach($blocks as $module => $modblocks) {
-    if (is_array($modblocks)) {
-      switch($regions[$rid]['modules'][$module]) {
-        case REGION_MANAGER_ALL_DISABLED:
-          // If they're all disabled for this module, go on to the next module.
-          continue;
-
-        case REGION_MANAGER_CUSTOM:
-          foreach($modblocks as $delta => $block) {
-            $key = $module .':'. $delta;
-            if (!in_array($key, $regions[$rid]['blocked_blocks']) && $block['region'] == BLOCK_REGION_NONE) {
-              $existing[] = theme('region_manager_menu_link', $block['info'],"region_manager_ajax/$theme_key/$region/$module/$delta");
-            }
-          }
-          break;
-
-        default:
-          foreach($modblocks as $delta => $block) {
-            if ($block['region'] == BLOCK_REGION_NONE) {
-              $existing[] = theme('region_manager_menu_link', $block['info'],"region_manager_ajax/$theme_key/$region/$module/$delta");
-            }
-          }
-          // End default.
-      }
+  if (!empty($blocks[$region]['inactive'])) {
+    foreach($blocks[$region]['inactive'] as $block) {
+      $existing[] = theme('region_manager_menu_link', $block['info'],"region_manager_ajax/$theme_key/$region/$module/$delta");
     }
-    //if (!empty($existing[$module]['children'])) {
-      //$existing[$module]['data'] = t('@module @blocks', array('@module' => $module, '@block' => $block_name));
-    //}
   }
 
-  $links['existing']['data'] = theme('region_manager_menu_link', t('Add existing'), drupal_get_destination());
-  $links['existing']['children'] = $existing;
+  $links['configure'] = l(t('Configure'), "admin/build/region_manager/$theme_key/$region", array('query' => drupal_get_destination()));
+
+  if (!empty($existing)) {
+    $path = isset($_GET['q']) ? $_GET['q'] : '';
+    $query = drupal_query_string_encode($_GET, array('q'));
+    if ($query != '') {
+      $path .= '?'. $query;
+    }
+
+    $links['existing']['data'] = theme('region_manager_menu_link', t('Add existing'), $path);
+    $links['existing']['children'] = $existing;
+  }
   return theme('region_manager_menu', $links);
 }
 
@@ -331,23 +306,151 @@ function region_manager_region_delete($rid) {
 }
 
 /**
- * Helper function to assemble the blocks 
+ * Loads all available blocks organized by region.
  */
-function _region_manager_block_rehash($theme_key, $region = NULL) {
+function region_manager_blocks_load_all($theme_key) {
+  static $all_blocks = NULL;
+  static $records = NULL;
+
   $blocks = array();
 
-  _block_rehash();
-
-  if (is_null($region)) {
-    $result = db_query("SELECT * FROM {blocks} WHERE theme = '%s'", $theme_key);
+  // Load the blocks and regions if we haven't yet.
+  if (is_null($all_blocks)) {
+    $all_blocks = _region_manager_block_rehash($theme_key);
   }
-  else {
-    $result = db_query("SELECT * FROM {blocks} WHERE theme = '%s' AND region = '%s'", $theme_key, $region);
+  if (is_null($records)) {
+    // Load all regions for this theme, so we don't have to reload for each region.
+    $records = region_manager_regions_load($theme_key);
   }
 
-  while ($block = db_fetch_array($result)) {
-    $blocks[$block['module']][$block['delta']] = $block;
+  // Might as well quit if we don't have any blocks.
+  if (empty($all_blocks)) {
+    return;
+  }
+
+  foreach(array_keys(region_manager_region_list($theme_key)) as $region) {
+    $rid = $theme_key .':'. $region;
+    $blocks[$region] = _region_manager_blocks_filter($region, $all_blocks, $records[$rid]);
   }
 
   return $blocks;
+}
+
+/**
+ * Helper function to filter all enabled and (available) disabled
+ * blocks for a particular region.
+ */
+function _region_manager_blocks_filter($region, $blocks = array(), $record = array()) {
+  $output = array();
+
+  foreach($blocks as $module => $modblocks) {
+    if (is_array($modblocks)) {
+
+      // If they're all disabled for this module, go on to the next module.
+      if ($record['modules'][$module] == REGION_MANAGER_ALL_DISABLED) {
+        continue;
+      }
+
+      // Otherwise, let's parse through each block.
+      else {
+        foreach($modblocks as $delta => $block) {
+          if ($block['status']) {
+            // Only add it to active if it's a part of this region.
+            if ($block['region'] == $region) {
+              $output['active'][] = $block;
+            }
+          }
+          else {
+            // Check to see if we're using custom availability for this module. 
+            if ($record['modules'][$module] == REGION_MANAGER_CUSTOM) {
+              $key = $module .':'. $delta;
+              // Is this block 'blocked'?
+              if (!in_array($key, $record['blocked_blocks'])) {
+                $output['inactive'][] = $block;
+              }
+            }
+            // Otherwise add all blocks for this module.
+            else {
+              $output['inactive'][] = $block;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return $output;
+}
+
+/**
+ * Helper function to assemble the blocks
+ */
+function _region_manager_block_rehash($theme_key) {
+  $blocks = array();
+ 
+  $result = db_query("SELECT * FROM {blocks} WHERE theme = '%s'", $theme_key);
+  $old_blocks = array();
+  while ($old_block = db_fetch_array($result)) {
+    $old_blocks[$old_block['module']][$old_block['delta']] = $old_block;
+  }
+
+  $blocks = array();
+  // Valid region names for the theme.
+  $regions = system_region_list($theme_key);
+
+  foreach (module_list() as $module) {
+    $module_blocks = module_invoke($module, 'block', 'list');
+    if ($module_blocks) {
+      foreach ($module_blocks as $delta => $block) {
+        if (empty($old_blocks[$module][$delta])) {
+          // If it's a new block, add identifiers.
+          $block['module'] = $module;
+          $block['delta']  = $delta;
+          $block['theme']  = $theme_key;
+          if (!isset($block['pages'])) {
+            // {block}.pages is type 'text', so it cannot have a
+            // default value, and not null, so we need to provide
+            // value if the module did not.
+            $block['pages']  = '';
+          }
+          // Add defaults and save it into the database.
+          drupal_write_record('blocks', $block);
+          // Set region to none if not enabled.
+          $block['region'] = $block['status'] ? $block['region'] : BLOCK_REGION_NONE;
+          // Add to the list of blocks we return.
+          $blocks[$module][$delta] = $block;
+        }
+        else {
+          // If it's an existing block, database settings should overwrite
+          // the code. But aside from 'info' everything that's definable in
+          // code is stored in the database and we do not store 'info', so we
+          // do not need to update the database here.
+          // Add 'info' to this block.
+          $old_blocks[$module][$delta]['info'] = $block['info'];
+          // If the region name does not exist, disable the block and assign it to none.
+          if (!empty($old_blocks[$module][$delta]['region']) && !isset($regions[$old_blocks[$module][$delta]['region']])) {
+            drupal_set_message(t('The block %info was assigned to the invalid region %region and has been disabled.', array('%info' => $old_blocks[$module][$delta]['info'], '%region' => $old_blocks[$module][$delta]['region'])), 'warning');
+            $old_blocks[$module][$delta]['status'] = 0;
+            $old_blocks[$module][$delta]['region'] = BLOCK_REGION_NONE;
+          }
+          else {
+            $old_blocks[$module][$delta]['region'] = $old_blocks[$module][$delta]['status'] ? $old_blocks[$module][$delta]['region'] : BLOCK_REGION_NONE;
+          }
+          // Add this block to the list of blocks we return.
+          $blocks[$module][$delta] = $old_blocks[$module][$delta];
+          // Remove this block from the list of blocks to be deleted.
+          unset($old_blocks[$module][$delta]);
+        }
+      }
+    }
+  }
+
+  // Remove blocks that are no longer defined by the code from the database.
+  foreach ($old_blocks as $module => $old_module_blocks) {
+    foreach ($old_module_blocks as $delta => $block) {
+      db_query("DELETE FROM {blocks} WHERE module = '%s' AND delta = '%s' AND theme = '%s'", $module, $delta, $theme_key);
+    }
+  }
+  return $blocks;
+
 }
