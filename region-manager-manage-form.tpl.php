@@ -29,7 +29,8 @@
 <?php
   // Add table javascript.
   drupal_add_js('misc/tableheader.js');
-  drupal_add_js(drupal_get_path('module', 'block') .'/block.js');
+  drupal_add_js(drupal_get_path('module', 'region_manager') .'/region_manager.js');
+  drupal_add_js(array('block_name' => strtolower($block_name)), 'setting');
   foreach ($block_regions as $region => $title) {
     drupal_add_tabledrag('blocks', 'match', 'sibling', 'block-region-select', 'block-region-'. $region, NULL, FALSE);
     drupal_add_tabledrag('blocks', 'order', 'sibling', 'block-weight', 'block-weight-'. $region);
@@ -38,34 +39,24 @@
 <table id="blocks" class="sticky-enabled">
   <thead>
     <tr>
-      <th><?php print t('@block', array('@block' => $block_name)); ?></th>
-      <th><?php print t('Region'); ?></th>
+      <th colspan="2"><?php print t($block_name); ?></th>
       <th><?php print t('Weight'); ?></th>
-      <?php if ($throttle): ?>
-        <th><?php print t('Throttle'); ?></th>
-      <?php endif; ?>
-      <th colspan="2"><?php print t('Operations'); ?></th>
     </tr>
   </thead>
   <tbody>
     <?php $row = 0; ?>
     <?php foreach ($block_regions as $region => $title): ?>
       <tr class="region region-<?php print $region?>">
-        <td colspan="5" class="region"><?php print $title; ?></td>
+        <td colspan="3" class="region"><?php print $title; ?></td>
       </tr>
       <tr class="region-message region-<?php print $region?>-message <?php print empty($block_listing[$region]) ? 'region-empty' : 'region-populated'; ?>">
-        <td colspan="5"><em><?php print t('No @blocks', array('@block' => strtolower($block_name))); ?></em></td>
+        <td colspan="3"><em><?php print t('No @blocks', array('@block' => strtolower($block_name))); ?></em></td>
       </tr>
       <?php foreach ($block_listing[$region] as $delta => $data): ?>
       <tr class="draggable <?php print $row % 2 == 0 ? 'odd' : 'even'; ?><?php print $data->row_class ? ' '. $data->row_class : ''; ?>">
         <td class="block"><?php print $data->block_title; ?></td>
         <td><?php print $data->region_select; ?></td>
         <td><?php print $data->weight_select; ?></td>
-        <?php if ($throttle): ?>
-          <td><?php print $data->throttle_check; ?></td>
-        <?php endif; ?>
-        <td><?php print $data->configure_link; ?></td>
-        <td><?php print $data->delete_link; ?></td>
       </tr>
       <?php $row++; ?>
       <?php endforeach; ?>

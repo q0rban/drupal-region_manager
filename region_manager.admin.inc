@@ -185,6 +185,8 @@ function theme_region_manager_blocks_form($form) {
   if (empty($form['blocked_blocks'])) {
     return;
   }
+
+  drupal_add_js(drupal_get_path('module', 'region_manager') .'/region_manager.admin.js');
   $output = '';
 
   $regions = region_manager_region_list($form['#theme_key']);

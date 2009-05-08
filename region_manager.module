@@ -35,7 +35,6 @@ function region_manager_init() {
     // Add css and js.
     $path = drupal_get_path('module', 'region_manager');
     drupal_add_css($path .'/region_manager.css');
-    drupal_add_js($path .'/region_manager.js');
 
     // Add the menus.
     $regions = variable_get('region_manager_regions', array());
@@ -163,28 +162,51 @@ function region_manager_region_list($theme_key) {
  * Returns a menu for the associated region.
  */
 function region_manager_region_menu($theme_key, $region) {
-  $existing = $links = array();
+  $links = array();
 
   $blocks = region_manager_blocks_load_all($theme_key);
 
-  if (!empty($blocks[$region]['inactive'])) {
-    foreach($blocks[$region]['inactive'] as $block) {
-      $existing[] = theme('region_manager_menu_link', $block['info'],"region_manager_ajax/$theme_key/$region/$module/$delta");
-    }
-  }
-
   $links['configure'] = l(t('Configure'), "admin/build/region_manager/$theme_key/$region", array('query' => drupal_get_destination()));
 
-  if (!empty($existing)) {
-    $path = isset($_GET['q']) ? $_GET['q'] : '';
-    $query = drupal_query_string_encode($_GET, array('q'));
-    if ($query != '') {
-      $path .= '?'. $query;
-    }
+  /*
+  $links['active']['data'] = t('Active');
+  $links['available']['data'] = t('Available');
+  $links['disabled']['data'] = t('Disabled');
 
-    $links['existing']['data'] = theme('region_manager_menu_link', t('Add existing'), $path);
-    $links['existing']['children'] = $existing;
+  // Active and available blocks.
+  if (is_array($blocks[$region]['active'])) {
+    foreach($blocks[$region]['active'] as $block) {
+      $module = $block['module'];
+      $delta = $block['delta'];
+      if ($block['visibility'] == 1) {
+        if (_region_manager_block_check_visibility($block)) {
+          $links['active']['children'][] = theme('region_manager_menu_link', $block['info'], "region_manager_ajax/$theme_key/$region/$module/$delta");
+        }
+        else {
+          $links['available']['children'][] = theme('region_manager_menu_link', $block['info'], "region_manager_ajax/$theme_key/$region/$module/$delta");
+        }
+      }
+    }
   }
+  if (empty($links['active']['children'])) {
+    unset($links['active']);
+  }
+  if (empty($links['available']['children'])) {
+    unset($links['available']);
+  }
+
+  // Disabled blocks.
+  if (is_array($blocks[$region]['disabled'])) {
+    foreach($blocks[$region]['disabled'] as $block) {
+      $module = $block['module'];
+      $delta = $block['delta'];
+      $links['disabled']['children'][] = theme('region_manager_menu_link', $block['info'], "region_manager_ajax/$theme_key/$region/$module/$delta");
+    }
+  }
+  if (empty($links['disabled']['children'])) {
+    unset($links['disabled']);
+  }*/
+
   return theme('region_manager_menu', $links);
 }
 
@@ -220,10 +242,8 @@ function theme_region_manager_menu($links) {
  *   A string containing the link, processed by l().
  */
 function theme_region_manager_menu_link($title, $path, $options = array()) {
-  $dest = drupal_get_destination();
-
-  if ($path != $dest && !isset($options['query']['destination'])) {
-    $options['query'] = array('destination' => drupal_get_destination());
+  if (!isset($options['query']['destination'])) {
+    $options['query'] = drupal_get_destination();
   }
 
   return l($title, $path, $options);
@@ -366,12 +386,12 @@ function _region_manager_blocks_filter($region, $blocks = array(), $record = arr
               $key = $module .':'. $delta;
               // Is this block 'blocked'?
               if (!in_array($key, $record['blocked_blocks'])) {
-                $output['inactive'][] = $block;
+                $output['disabled'][] = $block;
               }
             }
             // Otherwise add all blocks for this module.
             else {
-              $output['inactive'][] = $block;
+              $output['disabled'][] = $block;
             }
           }
         }
@@ -453,4 +473,22 @@ function _region_manager_block_rehash($theme_key) {
   }
   return $blocks;
 
+}
+
+/**
+ * Helper function to determine if the block is visible for a certain path.
+ *
+ * @return
+ *   Boolean FALSE if it's not visible, otherwise a string of the path.
+ */
+function _region_manager_block_check_visibility($block, $path = NULL) {
+  if ($block['visibility'] == 1) {
+    $path = is_null($path) ? drupal_get_path_alias($_GET['q']) : $path;
+    // Compare with the internal and path alias (if any).
+    $page_match = drupal_match_path($path, $block['pages']);
+    if ($path != $_GET['q']) {
+      $page_match = $page_match || drupal_match_path($_GET['q'], $block['pages']);
+    }
+  }
+  return $page_match ? $path : FALSE;
 }

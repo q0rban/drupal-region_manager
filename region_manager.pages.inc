@@ -23,7 +23,7 @@ function region_manager_manage($theme_key, $region = NULL) {
 /**
  * Generate main blocks administration form.
  */
-function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region = NULL) {
+function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) {
   // Add CSS
   drupal_add_css(drupal_get_path('module', 'block') .'/block.css', 'module', 'all', FALSE);
 
@@ -33,11 +33,21 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region =
     '#tree' => TRUE,
   );
 
-  $page = $_REQUEST['destination'];
+  $block_regions = array();
+  if ($path = $_REQUEST['destination']) {
+    $frontpage = variable_get('site_frontpage', 'node');
+    $alias = ($path == $frontpage) ? t('home page') : drupal_get_path_alias($path);
+    $block_regions[$path] = t('Active on %path', array('%path' => $alias));
+  }
+  $block_regions[$region] = t('Active');
+  $block_regions[BLOCK_REGION_NONE] = t('Disabled');
 
-  $all_regions = region_manager_region_list($theme_key);
-  $block_regions = $form['#block_regions'] = is_null($region) ? $all_regions : array($region => $all_regions[$region]);
-  $block_regions += array(BLOCK_REGION_NONE => '<'. t('none') .'>');
+  $form['#block_regions'] = $block_regions;
+  $form['#region_manager'] = array(
+    'theme_key' => $theme_key,
+    'region' => $region,
+    'path' => $path,
+  );
 
   // Weights range from -delta to +delta, so delta should be at least half
   // of the amount of blocks present. This makes sure all blocks in the same
@@ -45,6 +55,9 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region =
   $weight_delta = round(count($blocks) / 2);
 
   foreach ($blocks as $i => $block) {
+    if (_region_manager_block_check_visibility($block, $path)) {
+      $block['region'] = $path;
+    }
     $key = $block['module'] .'_'. $block['delta'];
     $form[$key]['module'] = array(
       '#type' => 'value',
@@ -71,11 +84,6 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region =
       '#default_value' => $block['region'],
       '#options' => $block_regions,
     );
-
-    $form[$key]['configure'] = array('#value' => l(t('configure'), 'admin/build/block/configure/'. $block['module'] .'/'. $block['delta']));
-    if ($block['module'] == 'block') {
-      $form[$key]['delete'] = array('#value' => l(t('delete'), 'admin/build/block/delete/'. $block['delta']));
-    }
   }
 
   $form['submit'] = array(
@@ -90,10 +98,25 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region =
  * Process main blocks administration form submission.
  */
 function region_manager_manage_form_submit($form, &$form_state) {
+  extract($form['#region_manager']);
+
   foreach ($form_state['values'] as $block) {
     $block['status'] = $block['region'] != BLOCK_REGION_NONE;
+    if ($block['status']) {
+      if ($path && ($block['region'] == $path)) {
+        // Set the region.
+        $block['region'] = $region;
+        // Add the path to pages, if it's not already there.
+      }
+      elseif ($block['region'] == $region) {
+        // Remove path from the pages.
+        if (_region_manager_block_check_visibility($block, $path)) {
+          $pages = $block['pages'];
+        }
+      }
+    }
     $block['region'] = $block['status'] ? $block['region'] : '';
-    db_query("UPDATE {blocks} SET status = %d, weight = %d, region = '%s', throttle = %d WHERE module = '%s' AND delta = '%s' AND theme = '%s'", $block['status'], $block['weight'], $block['region'], isset($block['throttle']) ? $block['throttle'] : 0, $block['module'], $block['delta'], $block['theme']);
+    //db_query("UPDATE {blocks} SET status = %d, weight = %d, region = '%s', throttle = %d WHERE module = '%s' AND delta = '%s' AND theme = '%s'", $block['status'], $block['weight'], $block['region'], isset($block['throttle']) ? $block['throttle'] : 0, $block['module'], $block['delta'], $block['theme']);
   }
   drupal_set_message(t('The block settings have been updated.'));
   cache_clear_all();
