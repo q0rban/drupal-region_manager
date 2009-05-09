@@ -107,15 +107,20 @@ function region_manager_manage_form_submit($form, &$form_state) {
         // Set the region.
         $block['region'] = $region;
         // Add the path to pages, if it's not already there.
+        if (!preg_match('/^'. $path .'$/im', $block['pages'])) {
+          $block['pages'] .= empty($block['pages']) ? $path : "\n". $path;
+        }
       }
       elseif ($block['region'] == $region) {
         // Remove path from the pages.
         if (_region_manager_block_check_visibility($block, $path)) {
-          $pages = $block['pages'];
+          $block['pages'] = preg_replace('/^'. $path .'$/im', '', $block['pages']);
         }
       }
     }
-    $block['region'] = $block['status'] ? $block['region'] : '';
+    else {
+      $block['pages'] = '';
+    }
     //db_query("UPDATE {blocks} SET status = %d, weight = %d, region = '%s', throttle = %d WHERE module = '%s' AND delta = '%s' AND theme = '%s'", $block['status'], $block['weight'], $block['region'], isset($block['throttle']) ? $block['throttle'] : 0, $block['module'], $block['delta'], $block['theme']);
   }
   drupal_set_message(t('The block settings have been updated.'));
