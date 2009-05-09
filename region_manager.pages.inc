@@ -11,8 +11,7 @@
  */
 function region_manager_manage($theme_key, $region = NULL) {
   // Fetch and sort blocks
-  $blocks = region_manager_blocks_load_all($theme_key);
-  $blocks = _region_manager_blocks_restructure($blocks);
+  $blocks = region_manager_blocks_load_all($theme_key, $region);
 
   module_load_include('inc', 'block', 'block.admin');
   usort($blocks, '_block_compare');
@@ -34,11 +33,19 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
   );
 
   $block_regions = array();
+
+  // If we're coming from a page, set that up as the top row label.
   if ($path = $_REQUEST['destination']) {
     $frontpage = variable_get('site_frontpage', 'node');
-    $alias = ($path == $frontpage) ? t('home page') : drupal_get_path_alias($path);
+    $alias = drupal_get_path_alias($path);
+    if ($path == $frontpage) {
+      $path = 'frontpage';
+      $alias = t('home page');
+    }
     $block_regions[$path] = t('Active on %path', array('%path' => $alias));
   }
+
+  // Now add the Active and Disabled row labels.
   $block_regions[$region] = t('Active');
   $block_regions[BLOCK_REGION_NONE] = t('Disabled');
 
@@ -55,9 +62,6 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
   $weight_delta = round(count($blocks) / 2);
 
   foreach ($blocks as $i => $block) {
-    if (_region_manager_block_check_visibility($block, $path)) {
-      $block['region'] = $path;
-    }
     $key = $block['module'] .'_'. $block['delta'];
     $form[$key]['module'] = array(
       '#type' => 'value',
@@ -84,6 +88,20 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
       '#default_value' => $block['region'],
       '#options' => $block_regions,
     );
+    // Now we customize this block depending on its status.
+    if (_region_manager_block_check_visibility($block, $path)) {
+      $block['region'] = $path;
+    }
+    $form[$key]['#attributes']['class'] = 'draggable';
+    if ($block['visibility'] != 1) {
+      if ($block['status']) {
+        $form[$key]['#attributes']['class'] = 'locked';
+        $form[$key]['info']['#value'] .= ' '. t('(Locked)');
+      }
+      else {
+        $form[$key]['disabled'] = array('#type' => 'hidden', '#value' => TRUE);
+      }
+    }
   }
 
   $form['submit'] = array(
@@ -101,8 +119,13 @@ function region_manager_manage_form_submit($form, &$form_state) {
   extract($form['#region_manager']);
 
   foreach ($form_state['values'] as $block) {
+    // Set the block status.
     $block['status'] = $block['region'] != BLOCK_REGION_NONE;
+
+    // Now let's go through our different scenarios for enabled blocks.
     if ($block['status']) {
+      // If the block is enabled for this path, we have to set the region and
+      // add the path to $block['pages'].
       if ($path && ($block['region'] == $path)) {
         // Set the region.
         $block['region'] = $region;
@@ -111,16 +134,32 @@ function region_manager_manage_form_submit($form, &$form_state) {
           $block['pages'] .= empty($block['pages']) ? $path : "\n". $path;
         }
       }
+      // Otherwise, if it's active, but not enabled for this path, make sure 
+      // we remove the path from $block['pages']
       elseif ($block['region'] == $region) {
         // Remove path from the pages.
         if (_region_manager_block_check_visibility($block, $path)) {
           $block['pages'] = preg_replace('/^'. $path .'$/im', '', $block['pages']);
         }
       }
+
+      // If the block was originally disabled, we need to set it up for our usage.
+      if ($block['disabled']) {
+        $block['visibility'] = 1;
+        $block['pages'] = $path;
+      }
     }
+    // Block is disabled, not much to do.
     else {
-      $block['pages'] = '';
+      // Clean up the pages setting.
+      if ($block['visibility'] == 1) {
+        $block['pages'] = '';
+      }
     }
+      ob_start();
+      print_r($block);
+      drupal_set_message(ob_get_contents());
+      ob_end_clean();
     //db_query("UPDATE {blocks} SET status = %d, weight = %d, region = '%s', throttle = %d WHERE module = '%s' AND delta = '%s' AND theme = '%s'", $block['status'], $block['weight'], $block['region'], isset($block['throttle']) ? $block['throttle'] : 0, $block['module'], $block['delta'], $block['theme']);
   }
   drupal_set_message(t('The block settings have been updated.'));

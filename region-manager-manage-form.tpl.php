@@ -53,7 +53,7 @@
         <td colspan="3"><em><?php print t('No @blocks', array('@block' => strtolower($block_name))); ?></em></td>
       </tr>
       <?php foreach ($block_listing[$region] as $delta => $data): ?>
-      <tr class="draggable <?php print $row % 2 == 0 ? 'odd' : 'even'; ?><?php print $data->row_class ? ' '. $data->row_class : ''; ?>">
+      <tr class="<?php print $row % 2 == 0 ? 'odd' : 'even'; ?><?php print $data->row_class ? ' '. $data->row_class : ''; ?>">
         <td class="block"><?php print $data->block_title; ?></td>
         <td><?php print $data->region_select; ?></td>
         <td><?php print $data->weight_select; ?></td>

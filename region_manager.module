@@ -328,7 +328,7 @@ function region_manager_region_delete($rid) {
 /**
  * Loads all available blocks organized by region.
  */
-function region_manager_blocks_load_all($theme_key) {
+function region_manager_blocks_load_all($theme_key, $region = NULL) {
   static $all_blocks = NULL;
   static $records = NULL;
 
@@ -348,9 +348,15 @@ function region_manager_blocks_load_all($theme_key) {
     return;
   }
 
-  foreach(array_keys(region_manager_region_list($theme_key)) as $region) {
+  if (is_null($region)) {
+    foreach(array_keys(region_manager_region_list($theme_key)) as $region) {
+      $rid = $theme_key .':'. $region;
+      $blocks[$region] = _region_manager_blocks_filter($region, $all_blocks, $records[$rid]);
+    }
+  }
+  else {
     $rid = $theme_key .':'. $region;
-    $blocks[$region] = _region_manager_blocks_filter($region, $all_blocks, $records[$rid]);
+    $blocks = _region_manager_blocks_filter($region, $all_blocks, $records[$rid]);
   }
 
   return $blocks;
@@ -377,7 +383,7 @@ function _region_manager_blocks_filter($region, $blocks = array(), $record = arr
           if ($block['status']) {
             // Only add it to active if it's a part of this region.
             if ($block['region'] == $region) {
-              $output['active'][] = $block;
+              $output[] = $block;
             }
           }
           else {
@@ -386,12 +392,12 @@ function _region_manager_blocks_filter($region, $blocks = array(), $record = arr
               $key = $module .':'. $delta;
               // Is this block 'blocked'?
               if (!in_array($key, $record['blocked_blocks'])) {
-                $output['disabled'][] = $block;
+                $output[] = $block;
               }
             }
             // Otherwise add all blocks for this module.
             else {
-              $output['disabled'][] = $block;
+              $output[] = $block;
             }
           }
         }
