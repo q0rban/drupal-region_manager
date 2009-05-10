@@ -166,46 +166,9 @@ function region_manager_region_menu($theme_key, $region) {
 
   $blocks = region_manager_blocks_load_all($theme_key);
 
-  $links['configure'] = l(t('Configure'), "admin/build/region_manager/$theme_key/$region", array('query' => drupal_get_destination()));
+  $dest = $_REQUEST['destination'] ? array('destination' => $_REQUEST['destination']) : drupal_get_destination();
 
-  /*
-  $links['active']['data'] = t('Active');
-  $links['available']['data'] = t('Available');
-  $links['disabled']['data'] = t('Disabled');
-
-  // Active and available blocks.
-  if (is_array($blocks[$region]['active'])) {
-    foreach($blocks[$region]['active'] as $block) {
-      $module = $block['module'];
-      $delta = $block['delta'];
-      if ($block['visibility'] == 1) {
-        if (_region_manager_block_check_visibility($block)) {
-          $links['active']['children'][] = theme('region_manager_menu_link', $block['info'], "region_manager_ajax/$theme_key/$region/$module/$delta");
-        }
-        else {
-          $links['available']['children'][] = theme('region_manager_menu_link', $block['info'], "region_manager_ajax/$theme_key/$region/$module/$delta");
-        }
-      }
-    }
-  }
-  if (empty($links['active']['children'])) {
-    unset($links['active']);
-  }
-  if (empty($links['available']['children'])) {
-    unset($links['available']);
-  }
-
-  // Disabled blocks.
-  if (is_array($blocks[$region]['disabled'])) {
-    foreach($blocks[$region]['disabled'] as $block) {
-      $module = $block['module'];
-      $delta = $block['delta'];
-      $links['disabled']['children'][] = theme('region_manager_menu_link', $block['info'], "region_manager_ajax/$theme_key/$region/$module/$delta");
-    }
-  }
-  if (empty($links['disabled']['children'])) {
-    unset($links['disabled']);
-  }*/
+  $links['configure'] = l(t('Configure'), "admin/build/region_manager/$theme_key/$region", array('query' => $dest));
 
   return theme('region_manager_menu', $links);
 }
