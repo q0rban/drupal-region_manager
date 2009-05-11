@@ -289,7 +289,8 @@ function theme_region_manager_nodeblock_menu($theme_key, $region) {
         if ($path = $_REQUEST['destination']) {
           $options['query'] = array('destination' => $path);
         }
-        $links[] = l(t('@type @block', array('@type' => $type->name, '@block' => _region_manager_block_name())), "node/add/{$type->type}/$theme_key/$region", $options);
+        $type_url_str = str_replace('_', '-', $type->type);
+        $links[] = l(t('@type @block', array('@type' => $type->name, '@block' => _region_manager_block_name())), "node/add/$type_url_str/$theme_key/$region", $options);
       }
     }
   }

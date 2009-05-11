@@ -446,7 +446,6 @@ function _region_manager_block_rehash($theme_key) {
     }
   }
   return $blocks;
-
 }
 
 /**
