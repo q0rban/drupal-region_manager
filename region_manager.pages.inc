@@ -9,14 +9,21 @@
 /**
  * Menu callback to prepare the manage form for viewing.
  */
-function region_manager_manage($theme_key, $region = NULL) {
+function region_manager_manage($theme_key, $region) {
+  $output = '';
+
+  if (function_exists('nodeblock_block')) {
+    $output .= theme('region_manager_nodeblock_menu', $theme_key, $region);
+  }
   // Fetch and sort blocks
   $blocks = region_manager_blocks_load_all($theme_key, $region);
 
   module_load_include('inc', 'block', 'block.admin');
   usort($blocks, '_block_compare');
 
-  return drupal_get_form('region_manager_manage_form', $blocks, $theme_key, $region);
+  $output .= drupal_get_form('region_manager_manage_form', $blocks, $theme_key, $region);
+
+  return $output;
 }
 
 /**
@@ -37,11 +44,8 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
   // If we're coming from a page, set that up as the top row label.
   if ($path = $_REQUEST['destination']) {
     $frontpage = variable_get('site_frontpage', 'node');
-    $alias = drupal_get_path_alias($path);
-    if ($path == $frontpage) {
-      $path = '<front>';
-      $alias = t('home page');
-    }
+    $alias = ($path == $frontpage) ? t('home page') : drupal_get_path_alias($path);
+
     $block_regions['active_path'] = t('Active on %path', array('%path' => $alias));
   }
 
@@ -142,6 +146,9 @@ function region_manager_manage_form_submit($form, &$form_state) {
   $theme_key = $form['#region_manager']['theme_key'];
   $region    = $form['#region_manager']['region'];
   $path      = $form['#region_manager']['path'];
+
+  $frontpage = variable_get('site_frontpage', 'node');
+  $path = ($path == $frontpage) ? '<front>' : $path;
 
   foreach ($form_state['values'] as $key => $block) {
     // Set the block status.
@@ -263,5 +270,32 @@ function _region_manager_blocks_restructure($blocks) {
       }
     }
   }
+  return $output;
+}
+
+/**
+ * 
+ */
+function theme_region_manager_nodeblock_menu($theme_key, $region) {
+  $output = '<div class="region-manager-nodeblock-menu">';
+  $output .= '<h4>'. t('Add new:') .'</h4>';
+
+  $types = node_get_types();
+
+  foreach ($types as $type) {
+    if (nodeblock_type_enabled($type)) {
+      if (node_access('create', $type)) {
+        $options = array();
+        if ($path = $_REQUEST['destination']) {
+          $options['query'] = array('destination' => $path);
+        }
+        $links[] = l(t('@type @block', array('@type' => $type->name, '@block' => _region_manager_block_name())), "node/add/{$type->type}/$theme_key/$region", $options);
+      }
+    }
+  }
+
+  $output .= theme('item_list', $links);
+  $output .= '</div>';
+
   return $output;
 }

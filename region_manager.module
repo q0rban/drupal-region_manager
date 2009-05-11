@@ -130,6 +130,9 @@ function region_manager_theme() {
   $items['region_manager_region_menu'] = array(
     'arguments' => array('theme_key' => NULL, 'region' => NULL),
   );
+  $items['region_manager_nodeblock_menu'] = array(
+    'arguments' => array('theme_key' => NULL, 'region' => NULL),
+  );
   $items['region_manager_manage_form'] = array(
     'template' => 'region-manager-manage-form',
     'file' => 'region_manager.pages.inc',
@@ -137,6 +140,44 @@ function region_manager_theme() {
   );
 
   return $items;
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function region_manager_form_alter(&$form, $form_state, $form_id) {
+  if (function_exists('nodeblock_block') && $form['#id'] == 'node-form' && variable_get('nodeblock_'. $form['type']['#value'], 0) && !$form['nid']['#value']) {
+    if (($theme_key = arg(3)) && ($region = arg(4)) && ($path = $_REQUEST['destination'])) {
+      $frontpage = variable_get('site_frontpage', 'node');
+      $path = ($path == $frontpage) ? '<front>' : $path;
+
+      $form['region_manager'] = array(
+        '#tree' => TRUE,
+      );
+      $form['region_manager']['theme_key'] = array(
+        '#type' => 'hidden',
+        '#value' => $theme_key,
+      );
+      $form['region_manager']['region'] = array(
+        '#type' => 'hidden',
+        '#value' => $region,
+      );
+      $form['region_manager']['path'] = array(
+        '#type' => 'hidden',
+        '#value' => $path,
+      );
+    }
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function region_manager_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  if ($op == 'insert' && function_exists('nodeblock_block') && $node->region_manager) {
+    _block_rehash();
+    db_query("UPDATE {blocks} SET status = 1,  region = '%s', visibility = 1, pages = '%s' WHERE module = 'nodeblock' AND delta = '%s' AND theme = '%s'", $node->region_manager['region'], $node->region_manager['path'], $node->nid, $node->region_manager['theme_key']);
+  }
 }
 
 /**
