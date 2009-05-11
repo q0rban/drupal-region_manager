@@ -41,7 +41,7 @@ function region_manager_init() {
     if (is_array($regions[$theme_key])) {
       foreach($regions[$theme_key] as $region => $value) {
         if ($value) {
-          $menu = region_manager_region_menu($theme_key, $region);
+          $menu = theme('region_manager_region_menu', $theme_key, $region);
           drupal_set_content($region, $menu);
         }
       }
@@ -127,11 +127,8 @@ function region_manager_theme() {
   $items['region_manager_blocks_form'] = array(
     'arguments' => array('form' => array()),
   );
-  $items['region_manager_menu'] = array(
-    'arguments' => array('links' => array()),
-  );
-  $items['region_manager_menu_link'] = array(
-    'arguments' => array('title' => NULL, 'path' => NULL, 'options' => array()),
+  $items['region_manager_region_menu'] = array(
+    'arguments' => array('theme_key' => NULL, 'region' => NULL),
   );
   $items['region_manager_manage_form'] = array(
     'template' => 'region-manager-manage-form',
@@ -159,57 +156,24 @@ function region_manager_region_list($theme_key) {
 }
 
 /**
- * Returns a menu for the associated region.
- */
-function region_manager_region_menu($theme_key, $region) {
-  $links = array();
-
-  $blocks = region_manager_blocks_load_all($theme_key);
-
-  $dest = $_REQUEST['destination'] ? array('destination' => $_REQUEST['destination']) : drupal_get_destination();
-
-  $links['configure'] = l(t('Configure'), "admin/build/region_manager/$theme_key/$region", array('query' => $dest));
-
-  return theme('region_manager_menu', $links);
-}
-
-/**
  * Theme function that builds the menu from a set of links.
  *
- * @param $links
- *   A multi-dimensional array tree of links.
+ * @param $theme_key
+ *   A string containing the key for the active theme.
+ * @param $region
+ *   A string containing the region to be managed.
  *
  * @return
- *   A string containing the fully themed region manager menu.
+ *   A string containing the link wrapped in a div.
  *
  * @ingroup themable
  */
-function theme_region_manager_menu($links) {
-  $output = '<div class="region-manager-menu">';
-  $output .= theme('item_list', $links);
-  $output .= '</div>';
-  return $output;
-}
+function theme_region_manager_region_menu($theme_key, $region) {
+  $dest = $_REQUEST['destination'] ? array('destination' => $_REQUEST['destination']) : drupal_get_destination();
 
-/**
- * Helper function to construct a single region manager menu link.
- *
- * @param $title
- *   The link title.
- * @param $path
- *   The path or href of the link.
- * @param $options
- *   An array of options.
- *
- * @return
- *   A string containing the link, processed by l().
- */
-function theme_region_manager_menu_link($title, $path, $options = array()) {
-  if (!isset($options['query']['destination'])) {
-    $options['query'] = drupal_get_destination();
-  }
+  $link = l(t('Configure'), "admin/build/region_manager/$theme_key/$region", array('query' => $dest));
 
-  return l($title, $path, $options);
+  return "<div class='region-manager-menu'>$link</div>\n";
 }
 
 /**
@@ -418,7 +382,7 @@ function _region_manager_block_rehash($theme_key) {
           $old_blocks[$module][$delta]['info'] = $block['info'];
           // If the region name does not exist, disable the block and assign it to none.
           if (!empty($old_blocks[$module][$delta]['region']) && !isset($regions[$old_blocks[$module][$delta]['region']])) {
-            drupal_set_message(t('The block %info was assigned to the invalid region %region and has been disabled.', array('%info' => $old_blocks[$module][$delta]['info'], '%region' => $old_blocks[$module][$delta]['region'])), 'warning');
+            drupal_set_message(t('The @block %info was assigned to the invalid region %region and has been disabled.', array('@block' => _region_manager_block_name(), '%info' => $old_blocks[$module][$delta]['info'], '%region' => $old_blocks[$module][$delta]['region'])), 'warning');
             $old_blocks[$module][$delta]['status'] = 0;
             $old_blocks[$module][$delta]['region'] = BLOCK_REGION_NONE;
           }
@@ -460,4 +424,23 @@ function _region_manager_block_check_visibility($block, $path = NULL) {
     }
   }
   return $page_match ? $path : FALSE;
+}
+
+/**
+ * Helper function to display the custom block name.
+ *
+ * @param $name
+ *   String designating upper or lower case.
+ */
+function _region_manager_block_name($case = 'lower') {
+  static $name;
+
+  if (empty($name)) {
+    $name = variable_get('region_manager_block_name', 'Block');
+  }
+
+  if ($case == 'lower') {
+    return strtolower($name);
+  }
+  return ucfirst($name);
 }

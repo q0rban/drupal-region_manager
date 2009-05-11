@@ -8,7 +8,6 @@
  * Available variables:
  * - $block_regions: An array of regions. Keyed by name with the title as value.
  * - $block_listing: An array of blocks keyed by region and then delta.
- * - $block_name: The setting name for 'blocks', ie widget, gadget.
  * - $form_submit: Form submit button.
  *
  * Each $block_listing[$region] contains an array of blocks for that region.
@@ -30,7 +29,7 @@
   // Add table javascript.
   drupal_add_js('misc/tableheader.js');
   drupal_add_js(drupal_get_path('module', 'region_manager') .'/region_manager.js');
-  drupal_add_js(array('block_name' => strtolower($block_name)), 'setting');
+  drupal_add_js(array('block_name' => _region_manager_block_name()), 'setting');
   foreach ($block_regions as $region => $title) {
     drupal_add_tabledrag('blocks', 'match', 'sibling', 'block-region-select', 'block-region-'. $region, NULL, FALSE);
     drupal_add_tabledrag('blocks', 'order', 'sibling', 'block-weight', 'block-weight-'. $region);
@@ -39,7 +38,7 @@
 <table id="blocks" class="sticky-enabled">
   <thead>
     <tr>
-      <th colspan="2"><?php print t($block_name); ?></th>
+      <th colspan="2"><?php print t(_region_manager_block_name('upper')); ?></th>
       <th><?php print t('Weight'); ?></th>
     </tr>
   </thead>
@@ -50,7 +49,7 @@
         <td colspan="3" class="region"><?php print $title; ?></td>
       </tr>
       <tr class="region-message region-<?php print $region?>-message <?php print empty($block_listing[$region]) ? 'region-empty' : 'region-populated'; ?>">
-        <td colspan="3"><em><?php print t('No @blocks', array('@block' => strtolower($block_name))); ?></em></td>
+        <td colspan="3"><em><?php print t('No @blocks', array('@block' => _region_manager_block_name())); ?></em></td>
       </tr>
       <?php foreach ($block_listing[$region] as $delta => $data): ?>
       <tr class="<?php print $row % 2 == 0 ? 'odd' : 'even'; ?><?php print $data->row_class ? ' '. $data->row_class : ''; ?>">

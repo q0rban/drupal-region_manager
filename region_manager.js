@@ -1,5 +1,24 @@
 // $Id$
 
+$(function() {
+  $('input.region-manager-manage-form-title-status').change(function() {
+    var id = $(this).attr('id');
+    var textfield = $('input.form-text', $(this).parents('td.block'));
+    if (this.checked) {
+      textfield.removeAttr("disabled");
+      if (textfield.val() == '<none>') {
+        textfield.val('');
+      }
+    }
+    else {
+      textfield.val('<none>').attr("disabled", true);
+    }
+  });
+
+  // Simulate a change so we can disable the title field if need be.
+  $('input.region-manager-manage-form-title-status').change();
+});
+
 /**
  * Move a block in the blocks table from one region to another via select list.
  *

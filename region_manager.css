@@ -9,5 +9,18 @@
 }
 
 html.js #region-manager-manage-form select.block-region-select {
-	//display: none;
+	display: none;
+}
+
+td.block div.form-item,
+td.block div.form-item strong {
+  float: left;
+}
+
+input.region-manager-manage-form-title {
+  margin-left: 1em;
+}
+
+.draggable a.tabledrag-handle {
+  height: 100%;
 }

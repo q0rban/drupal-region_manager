@@ -39,7 +39,7 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
     $frontpage = variable_get('site_frontpage', 'node');
     $alias = drupal_get_path_alias($path);
     if ($path == $frontpage) {
-      // $path = '<front>';
+      $path = '<front>';
       $alias = t('home page');
     }
     $block_regions['active_path'] = t('Active on %path', array('%path' => $alias));
@@ -58,7 +58,13 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
   $weight_delta = round(count($blocks) / 2);
 
   foreach ($blocks as $i => $block) {
+
     $key = $block['module'] .'_'. $block['delta'];
+
+    $form[$key]['theme'] = array(
+      '#type' => 'hidden',
+      '#value' => $theme_key
+    );
     $form[$key]['module'] = array(
       '#type' => 'value',
       '#value' => $block['module'],
@@ -67,13 +73,24 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
       '#type' => 'value',
       '#value' => $block['delta'],
     );
+
+    // Block name.
     $form[$key]['info'] = array(
-      '#value' => check_plain($block['info'])
+      '#value' => check_plain($block['info']),
     );
-    $form[$key]['theme'] = array(
-      '#type' => 'hidden',
-      '#value' => $theme_key
+
+    // Title.
+    $form[$key]['title_status'] = array(
+      '#attributes' => array('class' => 'region-manager-manage-form-title-status'),
+      '#type' => 'checkbox',
+      '#default_value' => !($block['title'] == '<none>'),
     );
+    $form[$key]['title'] = array(
+      '#attributes' => array('class' => 'region-manager-manage-form-title'),
+      '#type' => 'textfield',
+      '#default_value' => $block['title'],
+    );
+
     $form[$key]['weight'] = array(
       '#type' => 'weight',
       '#default_value' => $block['weight'],
@@ -84,8 +101,16 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
       '#default_value' => $block['region'],
       '#options' => $block_regions,
     );
-    $form[$key]['visibility'] = array('#type' => 'value', '#value' => $block['visibility']);
-    $form[$key]['pages'] = array('#type' => 'value', '#value' => $block['pages']);
+
+    $form[$key]['visibility'] = array(
+      '#type' => 'value',
+      '#value' => $block['visibility'],
+    );
+    $form[$key]['pages'] = array(
+      '#type' => 'value',
+      '#value' => $block['pages'],
+    );
+
     // Now we customize this block depending on its status.
     if (_region_manager_block_check_visibility($block, $path)) {
       $form[$key]['region']['#default_value'] = 'active_path';
@@ -104,7 +129,7 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
 
   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Save @blocks', array('@block' => strtolower(variable_get('region_manager_block_name', 'Block')))),
+    '#value' => t('Save @blocks', array('@block' => _region_manager_block_name())),
   );
 
   return $form;
@@ -121,6 +146,8 @@ function region_manager_manage_form_submit($form, &$form_state) {
   foreach ($form_state['values'] as $key => $block) {
     // Set the block status.
     $block['status'] = $block['region'] != BLOCK_REGION_NONE;
+    $block['title'] = check_plain(trim($block['title']));
+    $block['title'] = $block['title_status'] ?  $block['title'] : '<none>';
 
     // Now let's go through our different scenarios for enabled blocks.
     if ($block['status']) {
@@ -149,20 +176,20 @@ function region_manager_manage_form_submit($form, &$form_state) {
         $block['pages'] = $path;
       }
     }
-    // Block is disabled, not much to do.
+    // If the block is disabled, clean up region and pages.
     else {
-      // Clean up the pages setting.
+      $block['region'] = '';
       if ($block['visibility'] == 1) {
         $block['pages'] = '';
       }
     }
-    ob_start();
+    /* ob_start();
     var_export($block);
     drupal_set_message(ob_get_contents());
-    ob_end_clean();
-    //db_query("UPDATE {blocks} SET status = %d, weight = %d, region = '%s', visibility = %d, pages = '%s' WHERE module = '%s' AND delta = '%s' AND theme = '%s'", $block['status'], $block['weight'], $block['region'], $block['visibility'], $block['module'], $block['delta'], $block['theme']);
+    ob_end_clean(); */
+    db_query("UPDATE {blocks} SET status = %d, weight = %d, region = '%s', visibility = %d, pages = '%s', title = '%s' WHERE module = '%s' AND delta = '%s' AND theme = '%s'", $block['status'], $block['weight'], $block['region'], $block['visibility'], $block['pages'], $block['title'], $block['module'], $block['delta'], $block['theme']);
   }
-  drupal_set_message(t('The block settings have been updated.'));
+  drupal_set_message(t('The @block settings have been updated.', array('@block' => _region_manager_block_name())));
   cache_clear_all();
 }
 
@@ -180,8 +207,6 @@ function template_preprocess_region_manager_manage_form(&$vars) {
 
   $block_regions = $vars['form']['#block_regions'];
   $vars['block_regions'] = $block_regions + array(BLOCK_REGION_NONE => t('Disabled'));
-
-  $vars['block_name'] = variable_get('region_manager_block_name', 'Block');
 
   foreach ($block_regions as $key => $value) {
     // Highlight regions on page to provide visual reference.
@@ -209,7 +234,8 @@ function template_preprocess_region_manager_manage_form(&$vars) {
 
       $vars['block_listing'][$region][$i]->row_class = isset($block['#attributes']['class']) ? $block['#attributes']['class'] : '';
       $vars['block_listing'][$region][$i]->block_modified = isset($block['#attributes']['class']) && strpos($block['#attributes']['class'], 'block-modified') !== FALSE ? TRUE : FALSE;
-      $vars['block_listing'][$region][$i]->block_title =  drupal_render($block['info']);
+      $block['title']['#field_prefix'] = drupal_render($block['title_status']);
+      $vars['block_listing'][$region][$i]->block_title = '<strong class="block-info">'. drupal_render($block['info']) .'</strong>'. drupal_render($block['title']);
       $vars['block_listing'][$region][$i]->region_select = drupal_render($block['region']) . drupal_render($block['theme']);
       $vars['block_listing'][$region][$i]->weight_select = drupal_render($block['weight']);
       $vars['block_listing'][$region][$i]->throttle_check = $vars['throttle'] ? drupal_render($block['throttle']) : '';
