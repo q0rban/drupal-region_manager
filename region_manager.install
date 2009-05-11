@@ -54,4 +54,6 @@ function region_manager_schema() {
  */
 function region_manager_uninstall() {
   drupal_uninstall_schema('region_manager');
+  variable_del('region_manager_block_name');
+  variable_del('region_manager_regions');
 }
