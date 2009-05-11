@@ -7,6 +7,27 @@
  */
 
 /**
+ * Configuration settings form.
+ */
+function region_manager_settings_form() {
+  $form = array();
+
+  $form['region_manager_block_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('What should a "Block" be called?'),
+    '#description' => t('Please note: this only changes the name "Block" within the region manager UI, not throughout your Drupal site.'),
+    '#default_value' => variable_get('region_manager_block_name', 'Block'),
+  );
+
+  $form = system_settings_form($form);
+
+  // Uncomment and update the callback to override the default system settings submit handler.
+  // $form['#submit'] = array('_settings_form_submit');
+
+  return $form;
+}
+
+/**
  * Region settings form.
  */
 function region_manager_regions_form() {
@@ -18,13 +39,6 @@ function region_manager_regions_form() {
 
   module_load_include('inc', 'system', 'system.admin');
   uasort($themes, 'system_sort_modules_by_info_name');
-
-  $form['region_manager_block_name'] = array(
-    '#type' => 'textfield',
-    '#title' => t('What should a "Block" be called?'),
-    '#description' => t('Please note: this only changes the name "Block" within the region manager UI, not throughout your Drupal site.'),
-    '#default_value' => variable_get('region_manager_block_name', 'Block'),
-  );
 
   $form['region_manager_regions']['#tree'] = TRUE;
 

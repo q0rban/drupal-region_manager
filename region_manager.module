@@ -59,23 +59,38 @@ function region_manager_menu() {
     'title' => 'Region Manager regions',
     'description' => 'Configure region manager settings',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('region_manager_regions_form'),
+    'page arguments' => array('region_manager_settings_form'),
     'access arguments' => array('administer region manager'),
     'file' => 'region_manager.admin.inc',
   );
+  $items['admin/settings/region_manager/settings'] = array(
+    'title' => 'Settings',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+
   $items['admin/settings/region_manager/regions'] = array(
-    'title' => 'Regions',
+    'title' => 'Region Manager regions',
+    'description' => 'Configure region manager settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('region_manager_regions_form'),
+    'access arguments' => array('administer region manager'),
+    'file' => 'region_manager.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+  $items['admin/settings/region_manager/regions/list'] = array(
+    'title' => 'List',
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
   );
 
   foreach(list_themes() as $theme) {
     if ($theme->status) {
-      $items['admin/settings/region_manager/'. $theme->name] = array(
+      $items['admin/settings/region_manager/regions/'. $theme->name] = array(
         'title' => $theme->info['name'],
         'description' => 'Configure region manager settings',
         'page callback' => 'drupal_get_form',
-        'page arguments' => array('region_manager_blocks_form', 3),
+        'page arguments' => array('region_manager_blocks_form', 4),
         'access arguments' => array('administer region manager'),
         'file' => 'region_manager.admin.inc',
         'type' => MENU_LOCAL_TASK,

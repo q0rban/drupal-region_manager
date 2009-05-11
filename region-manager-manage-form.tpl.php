@@ -36,26 +36,21 @@
   }
 ?>
 <table id="blocks" class="sticky-enabled">
-  <thead>
-    <tr>
-      <th colspan="2"><?php print t(_region_manager_block_name('upper')); ?></th>
-      <th><?php print t('Weight'); ?></th>
-    </tr>
-  </thead>
   <tbody>
     <?php $row = 0; ?>
     <?php foreach ($block_regions as $region => $title): ?>
       <tr class="region region-<?php print $region?>">
-        <td colspan="3" class="region"><?php print $title; ?></td>
+        <td colspan="4" class="region"><?php print $title; ?></td>
       </tr>
       <tr class="region-message region-<?php print $region?>-message <?php print empty($block_listing[$region]) ? 'region-empty' : 'region-populated'; ?>">
-        <td colspan="3"><em><?php print t('No @blocks', array('@block' => _region_manager_block_name())); ?></em></td>
+        <td colspan="4"><em><?php print t('No @blocks', array('@block' => _region_manager_block_name())); ?></em></td>
       </tr>
       <?php foreach ($block_listing[$region] as $delta => $data): ?>
       <tr class="<?php print $row % 2 == 0 ? 'odd' : 'even'; ?><?php print $data->row_class ? ' '. $data->row_class : ''; ?>">
         <td class="block"><?php print $data->block_title; ?></td>
         <td><?php print $data->region_select; ?></td>
         <td><?php print $data->weight_select; ?></td>
+        <td class="title-link"><?php print $data->title_link; ?></td>
       </tr>
       <?php $row++; ?>
       <?php endforeach; ?>

@@ -1,22 +1,55 @@
 // $Id$
 
 $(function() {
-  $('input.region-manager-manage-form-title-status').change(function() {
-    var id = $(this).attr('id');
-    var textfield = $('input.form-text', $(this).parents('td.block'));
-    if (this.checked) {
-      textfield.removeAttr("disabled");
-      if (textfield.val() == '<none>') {
-        textfield.val('');
+  // Move the textfields next to the label for the Use custom title radio.
+  /*
+  $('td.block div.region-manager-block-title-wrapper input.form-text').each(function () {
+    var title = $(this).parent();
+    $('input.form-radio', title.prev().children()).each(function () {
+      if ($(this).val() == 1) {
+        $(this).parent().parent().append(title);
       }
-    }
-    else {
-      textfield.val('<none>').attr("disabled", true);
+    });
+  });
+  */
+
+  $('input.region-manager-manage-form-title-status').change(function() {
+    if (this.checked) {
+      var id = $(this).attr('id');
+      var textfield = $('input.form-text', $(this).parents('td.block'));
+      switch (this.value) {
+        case '0':
+          textfield.val('').attr('disabled', 1);
+          break;
+
+        case '1':
+          if (textfield.val() == '<none>') {
+            textfield.val('');
+          }
+          textfield.removeAttr('disabled');
+          break;
+
+        case '2':
+          textfield.val('<none>').attr('disabled', 1);
+          break;
+      }
     }
   });
 
   // Simulate a change so we can disable the title field if need be.
   $('input.region-manager-manage-form-title-status').change();
+
+  $('td.title-link a').click(function() {
+    var class = $(this).attr('class');
+    var wrapper = $('div.' + class);
+    if (wrapper.is(':hidden')) {
+      wrapper.show('fast');
+    }
+    else {
+      wrapper.hide('fast');
+    }
+    return false;
+  });
 });
 
 /**

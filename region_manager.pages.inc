@@ -84,14 +84,33 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
     );
 
     // Title.
+    $link_title = t('Edit/Configure @block Title', array('@block' => _region_manager_block_name('upper')));
+    $link_path = 'admin/build/block/configure/'. $block['module'] .'/'. $block['delta'];
+    $link_options = array(
+      'attributes' => array('class' => 'region-manager-title-'. $key),
+      'query' => drupal_get_destination()
+    );
+    $form[$key]['title_link'] = array(
+      '#type' => 'markup',
+      '#value' => l($link_title, $link_path, $link_options),
+    );
+    $title_status = 0;
+    if ($block['title']) {
+      $title_status++;
+      if ($block['title'] == '<none>') {
+        $title_status++;
+      }
+    }
     $form[$key]['title_status'] = array(
       '#attributes' => array('class' => 'region-manager-manage-form-title-status'),
-      '#type' => 'checkbox',
-      '#default_value' => !($block['title'] == '<none>'),
+      '#type' => 'radios',
+      '#default_value' => $title_status,
+      '#options' => array(t('Use Default Title'), t('Use Custom Title'), t('Disable Title')),
     );
     $form[$key]['title'] = array(
       '#attributes' => array('class' => 'region-manager-manage-form-title'),
       '#type' => 'textfield',
+      '#size' => 40,
       '#default_value' => $block['title'],
     );
 
@@ -241,8 +260,13 @@ function template_preprocess_region_manager_manage_form(&$vars) {
 
       $vars['block_listing'][$region][$i]->row_class = isset($block['#attributes']['class']) ? $block['#attributes']['class'] : '';
       $vars['block_listing'][$region][$i]->block_modified = isset($block['#attributes']['class']) && strpos($block['#attributes']['class'], 'block-modified') !== FALSE ? TRUE : FALSE;
-      $block['title']['#field_prefix'] = drupal_render($block['title_status']);
-      $vars['block_listing'][$region][$i]->block_title = '<strong class="block-info">'. drupal_render($block['info']) .'</strong>'. drupal_render($block['title']);
+
+      $vars['block_listing'][$region][$i]->block_title = '<strong class="block-info">'. drupal_render($block['info']) .'</strong>';
+      $vars['block_listing'][$region][$i]->block_title .= '<div class="region-manager-block-title-wrapper region-manager-title-'. $i .'">';
+      $vars['block_listing'][$region][$i]->block_title .= drupal_render($block['title_status']) . drupal_render($block['title']);
+      $vars['block_listing'][$region][$i]->block_title .= '</div>';
+      $vars['block_listing'][$region][$i]->title_link = drupal_render($block['title_link']);
+
       $vars['block_listing'][$region][$i]->region_select = drupal_render($block['region']) . drupal_render($block['theme']);
       $vars['block_listing'][$region][$i]->weight_select = drupal_render($block['weight']);
       $vars['block_listing'][$region][$i]->throttle_check = $vars['throttle'] ? drupal_render($block['throttle']) : '';
@@ -293,6 +317,10 @@ function theme_region_manager_nodeblock_menu($theme_key, $region) {
         $links[] = l(t('@type @block', array('@type' => $type->name, '@block' => _region_manager_block_name())), "node/add/$type_url_str/$theme_key/$region", $options);
       }
     }
+  }
+
+  if (empty($links)) {
+    return;
   }
 
   $output .= theme('item_list', $links);

@@ -8,9 +8,20 @@
 	font-weight: bold;
 }
 
-html.js #region-manager-manage-form select.block-region-select {
+html.js #region-manager-manage-form select.block-region-select,
+html.js #region-manager-manage-form div.region-manager-block-title-wrapper {
 	display: none;
 }
+
+#region-manager-manage-form td.title-link {
+  text-align: right;
+  vertical-align: top;
+}
+/*
+#region-manager-manage-form div.region-manager-block-title-wrapper .region-manager-manage-form-title {
+  float: right;
+}
+
 
 td.block div.form-item,
 td.block div.form-item strong {
@@ -23,4 +34,4 @@ input.region-manager-manage-form-title {
 
 .draggable a.tabledrag-handle {
   height: 100%;
-}
+}*/
