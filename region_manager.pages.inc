@@ -8,13 +8,23 @@
 
 /**
  * Menu callback to prepare the manage form for viewing.
+ *
+ * @param $theme_key
+ *   A string containing the key of the active theme.
+ * @param $region
+ *   A string containing the region to be managed.
+ *
+ * @return
+ *   The HTML output of the page.
  */
 function region_manager_manage($theme_key, $region) {
   $output = '';
 
+  // Output the available content blocks to be added, if nodeblock is enabled.
   if (function_exists('nodeblock_block')) {
-    $output .= theme('region_manager_nodeblock_menu', $theme_key, $region);
+    $output .= theme('region_manager_nodeblock_menu', _region_manager_nodeblock_links($theme_key, $region));
   }
+
   // Fetch and sort blocks
   $blocks = region_manager_blocks_load_all($theme_key, $region);
 
@@ -28,6 +38,18 @@ function region_manager_manage($theme_key, $region) {
 
 /**
  * Generate main blocks administration form.
+ *
+ * @param $form_state
+ *   A keyed array containing the current state of the form.
+ * @param $blocks
+ *   An array of active and available blocks for this region.
+ * @param $theme_key
+ *   A string containing the key of the active theme.
+ * @param $region
+ *   A string containing the region to be managed.
+ *
+ * @return
+ *   The form structure.
  */
 function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) {
   // Add CSS
@@ -61,8 +83,8 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
   // region get an unique weight.
   $weight_delta = round(count($blocks) / 2);
 
+  // Prepare the form for each block.
   foreach ($blocks as $i => $block) {
-
     $key = $block['module'] .'_'. $block['delta'];
 
     $form[$key]['theme'] = array(
@@ -83,7 +105,7 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
       '#value' => check_plain($block['info']),
     );
 
-    // Title.
+    // Set up the javascript link to display the title edit form.
     $link_title = t('Edit/Configure @block Title', array('@block' => _region_manager_block_name('upper')));
     $link_path = 'admin/build/block/configure/'. $block['module'] .'/'. $block['delta'];
     $link_options = array(
@@ -94,26 +116,21 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
       '#type' => 'markup',
       '#value' => l($link_title, $link_path, $link_options),
     );
-    $title_status = 0; // Default title.
-    if ($block['title']) {
-      $title_status++; // Disabled title.
-      if ($block['title'] != '<none>') {
-        $title_status++; // Custom title.
-      }
-    }
+
+    // Set up the radios for the title status.
     $form[$key]['title_status'] = array(
       '#attributes' => array('class' => 'region-manager-manage-form-title-status'),
       '#type' => 'radios',
-      '#default_value' => $title_status,
+      '#default_value' => _region_manager_block_title_status($block['title']),
       '#options' => array(t('Use Default Title'), t('Disable Title'), t('Use Custom Title')),
     );
+
     $form[$key]['title'] = array(
       '#attributes' => array('class' => 'region-manager-manage-form-title'),
       '#type' => 'textfield',
       '#size' => 40,
       '#default_value' => $block['title'],
     );
-
     $form[$key]['weight'] = array(
       '#type' => 'weight',
       '#default_value' => $block['weight'],
@@ -139,11 +156,14 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
       $form[$key]['region']['#default_value'] = 'active_path';
     }
     $form[$key]['#attributes']['class'] = 'draggable';
+
     if ($block['visibility'] != 1) {
+      // We can't allow dragging of items if the block visibility isn't 1 and the block is active.
       if ($block['status']) {
         $form[$key]['#attributes']['class'] = 'locked';
         $form[$key]['info']['#value'] .= ' '. t('(Locked)');
       }
+      // Otherwise we flag this block as being disabled, to aid in processing the form after submission.
       else {
         $form[$key]['disabled'] = array('#type' => 'hidden', '#value' => TRUE);
       }
@@ -208,10 +228,6 @@ function region_manager_manage_form_submit($form, &$form_state) {
         $block['pages'] = '';
       }
     }
-    /* ob_start();
-    var_export($block);
-    drupal_set_message(ob_get_contents());
-    ob_end_clean(); */
     db_query("UPDATE {blocks} SET status = %d, weight = %d, region = '%s', visibility = %d, pages = '%s', title = '%s' WHERE module = '%s' AND delta = '%s' AND theme = '%s'", $block['status'], $block['weight'], $block['region'], $block['visibility'], $block['pages'], $block['title'], $block['module'], $block['delta'], $block['theme']);
   }
   drupal_set_message(t('The @block settings have been updated.', array('@block' => _region_manager_block_name())));
@@ -219,13 +235,13 @@ function region_manager_manage_form_submit($form, &$form_state) {
 }
 
 /**
- * Process variables for block-admin-display.tpl.php.
+ * Process variables for region-manager-manage-form.tpl.php.
  *
  * The $vars array contains the following arguments:
  * - $form
  *
- * @see block-admin-display.tpl.php
- * @see theme_block_admin_display()
+ * @see region-manager-manage-form.tpl.php
+ * @see theme_region_manager_manage_form()
  */
 function template_preprocess_region_manager_manage_form(&$vars) {
   global $theme_key;
@@ -281,28 +297,36 @@ function template_preprocess_region_manager_manage_form(&$vars) {
 }
 
 /**
- * Helper function to restructure the output from region_manager_blocks_load_all,
- * to just have all blocks in one array, rather than structured by [$region]['active'], etc.
+ * Theme function to output a list of nodeblock content types to add.
+ *
+ * @param $links
+ *   An array containing the available content types to add.
+ *
+ * @return
+ *   The HTML list of links.
  */
-function _region_manager_blocks_restructure($blocks) {
-  $output = array();
-  foreach($blocks as $status) {
-    foreach($status as $state) {
-      foreach($state as $block) {
-        $output[] = $block;
-      }
-    }
-  }
+function theme_region_manager_nodeblock_menu($links) {
+  $output = '<div class="region-manager-nodeblock-menu">';
+  $output .= '<h4>'. t('Add new:') .'</h4>';
+
+  $output .= theme('item_list', $links);
+  $output .= '</div>';
+
   return $output;
 }
 
 /**
- * 
+ * Loads a list of links to add new nodeblock content types.
+ *
+ * @param $theme_key
+ *   A string containing the key of the active theme.
+ * @param $region
+ *   A string containing the region to be managed.
+ *
+ * @return
+ *   An array containing the available content types to add.
  */
-function theme_region_manager_nodeblock_menu($theme_key, $region) {
-  $output = '<div class="region-manager-nodeblock-menu">';
-  $output .= '<h4>'. t('Add new:') .'</h4>';
-
+function _region_manager_nodeblock_links($theme_key, $region) {
   $types = node_get_types();
 
   foreach ($types as $type) {
@@ -317,13 +341,31 @@ function theme_region_manager_nodeblock_menu($theme_key, $region) {
       }
     }
   }
+}
 
-  if (empty($links)) {
-    return;
+/**
+ * Helper function to determine the status of a title.
+ *
+ * Title states:
+ *   0 = Using the default block title.
+ *   1 = The title is disabled.
+ *   2 = A custom title is being used.
+ *
+ * @param $title
+ *   A string containing the current title.
+ *
+ * @return
+ *   An integer containing the title state.
+ */
+function _region_manager_block_title_status($title) {
+  $title_status = 0; // Default title.
+
+  if ($title) {
+    $title_status++; // Disabled title.
+    if ($title != '<none>') {
+      $title_status++; // Custom title.
+    }
   }
 
-  $output .= theme('item_list', $links);
-  $output .= '</div>';
-
-  return $output;
+  return $title_status;
 }

@@ -146,7 +146,7 @@ function region_manager_theme() {
     'arguments' => array('theme_key' => NULL, 'region' => NULL),
   );
   $items['region_manager_nodeblock_menu'] = array(
-    'arguments' => array('theme_key' => NULL, 'region' => NULL),
+    'arguments' => array('links' => NULL),
   );
   $items['region_manager_manage_form'] = array(
     'template' => 'region-manager-manage-form',
