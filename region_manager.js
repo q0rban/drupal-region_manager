@@ -19,18 +19,18 @@ $(function() {
       var textfield = $('input.form-text', $(this).parents('td.block'));
       switch (this.value) {
         case '0':
-          textfield.val('').attr('disabled', 1);
+          textfield.val('').hide('fast');
           break;
 
         case '1':
-          if (textfield.val() == '<none>') {
-            textfield.val('');
-          }
-          textfield.removeAttr('disabled');
+          textfield.val('<none>').hide();
           break;
 
         case '2':
-          textfield.val('<none>').attr('disabled', 1);
+          if (textfield.val() == '<none>') {
+            textfield.val('');
+          }
+          textfield.show('fast');
           break;
       }
     }

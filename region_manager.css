@@ -17,6 +17,10 @@ html.js #region-manager-manage-form div.region-manager-block-title-wrapper {
   text-align: right;
   vertical-align: top;
 }
+
+#region-manager-manage-form .draggable a.tabledrag-handle {
+  height: 100%;
+}
 /*
 #region-manager-manage-form div.region-manager-block-title-wrapper .region-manager-manage-form-title {
   float: right;
@@ -32,6 +36,4 @@ input.region-manager-manage-form-title {
   margin-left: 1em;
 }
 
-.draggable a.tabledrag-handle {
-  height: 100%;
-}*/
+*/

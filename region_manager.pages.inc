@@ -94,18 +94,18 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
       '#type' => 'markup',
       '#value' => l($link_title, $link_path, $link_options),
     );
-    $title_status = 0;
+    $title_status = 0; // Default title.
     if ($block['title']) {
-      $title_status++;
-      if ($block['title'] == '<none>') {
-        $title_status++;
+      $title_status++; // Disabled title.
+      if ($block['title'] != '<none>') {
+        $title_status++; // Custom title.
       }
     }
     $form[$key]['title_status'] = array(
       '#attributes' => array('class' => 'region-manager-manage-form-title-status'),
       '#type' => 'radios',
       '#default_value' => $title_status,
-      '#options' => array(t('Use Default Title'), t('Use Custom Title'), t('Disable Title')),
+      '#options' => array(t('Use Default Title'), t('Disable Title'), t('Use Custom Title')),
     );
     $form[$key]['title'] = array(
       '#attributes' => array('class' => 'region-manager-manage-form-title'),
@@ -172,8 +172,7 @@ function region_manager_manage_form_submit($form, &$form_state) {
   foreach ($form_state['values'] as $key => $block) {
     // Set the block status.
     $block['status'] = $block['region'] != BLOCK_REGION_NONE;
-    $block['title'] = check_plain(trim($block['title']));
-    $block['title'] = $block['title_status'] ?  $block['title'] : '<none>';
+    $block['title'] = trim($block['title']);
 
     // Now let's go through our different scenarios for enabled blocks.
     if ($block['status']) {
