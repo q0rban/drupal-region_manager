@@ -306,6 +306,9 @@ function template_preprocess_region_manager_manage_form(&$vars) {
  *   The HTML list of links.
  */
 function theme_region_manager_nodeblock_menu($links) {
+  if (empty($links)) {
+    return;
+  }
   $output = '<div class="region-manager-nodeblock-menu">';
   $output .= '<h4>'. t('Add new:') .'</h4>';
 
