@@ -9,8 +9,18 @@
 }
 
 html.js #region-manager-manage-form select.block-region-select,
-html.js #region-manager-manage-form div.region-manager-block-title-wrapper {
+html.js #region-manager-manage-form div.region-manager-block-title-wrapper,
+#region-manager-manage-form div.region-manager-block-title-wrapper div.form-radios,
+#region-manager-manage-form td.title-link a {
 	display: none;
+}
+
+html.js #region-manager-manage-form td.title-link a {
+  display: inline;
+}
+
+html.js #region-manager-manage-form div.region-manager-block-title-wrapper div.form-radios {
+  display: block;
 }
 
 #region-manager-manage-form td.title-link {
