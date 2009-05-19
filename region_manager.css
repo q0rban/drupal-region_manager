@@ -82,6 +82,7 @@ html.js #region-manager-manage-form td.operations {
 	height: 36px;
 	background-repeat: no-repeat;
 	background-position: 0 0;
+	outline: 0;
 }
 
 #region-manager-manage-form td.operations li a:hover {
@@ -108,19 +109,19 @@ html.js #region-manager-manage-form td.operations {
 	background-image: url(images/btn_remove.png);
 }
 
-#region-manager-blocks-active-path td.operations li.rm-block-add-operation,
-#region-manager-blocks-available td.operations li.rm-block-remove-operation,
-#region-manager-blocks-available td.operations li.rm-block-disable-operation,
-#region-manager-blocks-available td.operations li.rm-block-configure-operation {
+#region-manager-blocks-active_path td.operations li.rm-block-add-operation,
+#region-manager-blocks-active_path tr.rm-state-disabled li.rm-block-remove-operation,
+#region-manager-blocks-active td.operations li.rm-block-configure-operation,
+#region-manager-blocks-disabled td.operations li.rm-block-configure-operation,
+#region-manager-blocks-active td.operations li.rm-block-remove-operation,
+#region-manager-blocks-disabled td.operations li.rm-block-remove-operation,
+#region-manager-blocks-disabled td.operations li.rm-block-disable-operation {
 	display: none;
 }
 
 /* @end */
 
-#region-manager-blocks-available .block-weight {
-	display: none;
-}
-
+#region-manager-manage-form td.weight,
 html.js #region-manager-manage-form div.region-manager-block-title-wrapper,
 #region-manager-manage-form div.region-manager-block-title-wrapper div.form-radios {
 	display: none;

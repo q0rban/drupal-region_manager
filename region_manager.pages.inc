@@ -70,7 +70,7 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
 
   // If we're coming from a page, set that up as the top row label.
   if ($path = $_REQUEST['destination']) {
-    $block_states[RM_BLOCK_ACTIVE_PATH] = t('Active on %path', array('%path' => _region_manager_path_name($path)));
+    $block_states[RM_BLOCK_ACTIVE_PATH] = t('Active on @path', array('@path' => _region_manager_path_name($path)));
   }
 
   // Now add the Active and Disabled row labels.
@@ -300,10 +300,10 @@ function _region_manager_block_operations($block, $key) {
   // Set up all the operations.
   $args = array('@block' => _region_manager_block_name('upper'));
   $ops = array(
-    'add' => t('Add @block', $args),
-    'remove' => t('Remove @block', $args),
-    'disable' => t('Disable @block', $args),
+    'disable' => t('Disable @block completely', $args),
+    'remove' => t('Remove @block from this page', $args),
     'configure' => t('Configure @block', $args),
+    'add' => t('Add @block to this page', $args),
   );
 
   // Get the path and destination.
@@ -314,6 +314,7 @@ function _region_manager_block_operations($block, $key) {
     $options = array(
       'attributes' => array(
         'title' => $title,
+        'class' => $op,
       ),
       'query' => $dest,
     );

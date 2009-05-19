@@ -32,52 +32,31 @@
   drupal_add_js(array('block_name' => _region_manager_block_name()), 'setting');
   foreach ($block_states as $state => $title) {
     //drupal_add_tabledrag('blocks', 'match', 'sibling', 'block-region-select', 'block-region-'. $region, NULL, FALSE);
-    drupal_add_tabledrag('region-manager-blocks-active-path', 'order', 'sibling', 'block-weight', 'block-weight-'. RM_BLOCK_ACTIVE_PATH);
+    drupal_add_tabledrag('region-manager-blocks-active_path', 'order', 'sibling', 'block-weight', 'block-weight-'. RM_BLOCK_ACTIVE_PATH);
   }
 ?>
-<table id="region-manager-blocks-active-path">
-  <tbody>
-    <?php $row = 0; ?>
-    <tr class="rm-state rm-state-<?php print RM_BLOCK_ACTIVE_PATH ?>">
-      <td colspan="4" class="rm-state"><?php print $block_states[RM_BLOCK_ACTIVE_PATH] ?></td>
-    </tr>
-    <tr class="rm-state-message rm-state-<?php print $state?>-message <?php print empty($block_listing[$state]) ? 'rm-state-empty' : 'rm-state-populated'; ?>">
-      <td colspan="4"><em><?php print t('No @blocks', array('@block' => _region_manager_block_name())); ?></em></td>
-    </tr>
-    <?php foreach ($block_listing[RM_BLOCK_ACTIVE_PATH] as $delta => $data): ?>
-    <tr class="rm-block rm-block-<?php print $delta; ?> rm-state-<?php print RM_BLOCK_ACTIVE_PATH ?> draggable <?php print $row % 2 == 0 ? 'odd' : 'even'; ?><?php print $data->row_class ? ' '. $data->row_class : ''; ?>">
-      <td class="block"><?php print $data->block_title; ?></td>
-      <td><?php print $data->region_select; ?></td>
-      <td><?php print $data->weight_select; ?></td>
-      <td class="operations"><?php print $data->operations; ?></td>
-    </tr>
-    <?php $row++; ?>
-    <?php endforeach; ?>
-    <?php unset($block_states[RM_BLOCK_ACTIVE_PATH]); ?>
-  </tbody>
-</table>
 
-<table id="region-manager-blocks-available">
-  <tbody>
-    <?php $row = 0; ?>
-    <?php foreach ($block_states as $state => $title): ?>
+<?php foreach ($block_states as $state => $title): ?>
+  <?php $row = 0; ?>
+  <table id="region-manager-blocks-<?php print $state; ?>">
+    <tbody>
       <tr class="rm-state rm-state-<?php print $state ?>">
         <td colspan="4" class="rm-state"><?php print $title ?></td>
       </tr>
       <tr class="rm-state-message rm-state-<?php print $state?>-message <?php print empty($block_listing[$state]) ? 'rm-state-empty' : 'rm-state-populated'; ?>">
-        <td colspan="4"><em><?php print t('No @blocks', array('@block' => _region_manager_block_name())); ?></em></td>
+        <td colspan="4"><em><?php print t('No @blocks @state', array('@block' => _region_manager_block_name(), '@state' => strtolower($title))); ?></em></td>
       </tr>
       <?php foreach ($block_listing[$state] as $delta => $data): ?>
       <tr class="rm-block rm-block-<?php print $delta; ?> rm-state-<?php print $state ?> <?php print $row % 2 == 0 ? 'odd' : 'even'; ?><?php print $data->row_class ? ' '. $data->row_class : ''; ?>">
         <td class="block"><?php print $data->block_title; ?></td>
-        <td><?php print $data->region_select; ?></td>
-        <td><?php print $data->weight_select; ?></td>
+        <td class="state"><?php print $data->state_select; ?></td>
+        <td class="weight"><?php print $data->weight_select; ?></td>
         <td class="operations"><?php print $data->operations; ?></td>
       </tr>
       <?php $row++; ?>
       <?php endforeach; ?>
-    <?php endforeach; ?>
-  </tbody>
-</table>
+    </tbody>
+  </table>
+<?php endforeach; ?>
 
 <?php print $form_submit; ?>

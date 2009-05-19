@@ -234,7 +234,7 @@ function region_manager_region_list($theme_key) {
 function theme_region_manager_region_menu($theme_key, $region) {
   $dest = $_REQUEST['destination'] ? array('destination' => $_REQUEST['destination']) : drupal_get_destination();
 
-  $link = l(t('Manage'), "admin/build/region_manager/$theme_key/$region", array('query' => $dest));
+  $link = l(t('Manage'), "admin/build/region_manager/$theme_key/$region", array('query' => $dest, 'attributes' => array('title' => t('Manage @region', array('@region' => region_manager_region_title($theme_key, $region))))));
 
   return "<div class='region-manager-menu'>$link</div>\n";
 }
