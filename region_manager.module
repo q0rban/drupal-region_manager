@@ -293,7 +293,7 @@ function region_manager_regions_load_all() {
 
   $records = array();
   while ($record = db_fetch_array($result)) {
-    $record['modules'] = unserialize($record);
+    $record['modules'] = unserialize($record['modules']);
     $records[$record['rid']] = $record;
   }
   return $records;
