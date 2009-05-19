@@ -1,5 +1,5 @@
 <?php
-// $Id$
+// $Id: region_manager.install,v 1.1.2.1 2009/05/18 19:41:44 q0rban Exp $
 
 /**
  * @file
@@ -23,11 +23,23 @@ function region_manager_schema() {
     'description' => 'Describes {blocks} access per region.',
     'fields' => array(
       'rid' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique region ID.',
+      ),
+      'theme_key' => array(
         'type' => 'varchar',
         'length' => 64,
         'not null' => TRUE,
-        'default' => '0',
-        'description' => 'A region ID, defined by the theme key and region.',
+        'default' => '',
+        'description' => 'The theme under which the region settings apply.',
+      ),
+      'region' => array(
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The region.',
       ),
       'blocked_blocks' => array(
         'type' => 'text',
@@ -44,6 +56,9 @@ function region_manager_schema() {
       ),
     ),
     'primary key' => array('rid'),
+    'unique keys' => array(
+      'tr' => array('theme_key', 'region'),
+    ),
   );
 
   return $schema;
@@ -54,6 +69,54 @@ function region_manager_schema() {
  */
 function region_manager_uninstall() {
   drupal_uninstall_schema('region_manager');
+  cache_clear_all('region_manager:*', 'cache', TRUE);
   variable_del('region_manager_block_name');
   variable_del('region_manager_regions');
+}
+
+/**
+ * Change rid to serial, and add theme and region as a unique key.
+ */
+function region_manager_update_6100() {
+  $ret = array();
+
+  $theme_key_field = array(
+    'type' => 'varchar',
+    'length' => 64,
+    'not null' => TRUE,
+    'default' => '',
+    'description' => 'The theme under which the region settings apply.',
+  );
+
+  $region_field = array(
+    'type' => 'varchar',
+    'length' => 64,
+    'not null' => TRUE,
+    'default' => '',
+    'description' => 'The theme under which the region settings apply.',
+  );
+  $rid_field = array(
+    'type' => 'serial',
+    'not null' => TRUE,
+    'description' => 'Primary Key: Unique region ID.',
+  );
+  $new_keys = array(
+    'primary key' => array('rid'),
+    'unique keys' => array(
+      'tr' => array('theme_key', 'region'),
+    ),
+  );
+
+  db_add_field($ret, 'region_manager_regions', 'region', $region_field);
+  db_add_field($ret, 'region_manager_regions', 'theme_key', $theme_key_field);
+
+  foreach(region_manager_regions_load_all() as $old_rid => $record) {
+    list($theme_key, $region) = explode(':', $old_rid);
+    $ret[] = update_sql("UPDATE {region_manager_regions} SET theme_key = '$theme_key', region = '$region' WHERE rid = '$old_rid'");
+  }
+  
+  db_drop_primary_key($ret, 'region_manager_regions');
+  db_change_field($ret, 'region_manager_regions', 'rid', 'rid', $rid_field, $new_keys);
+
+  return $ret;
 }

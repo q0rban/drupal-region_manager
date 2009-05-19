@@ -1,5 +1,5 @@
 <?php
-// $Id$
+// $Id: region_manager.module,v 1.1.2.2 2009/05/18 19:41:44 q0rban Exp $
 
 /**
  * @file
@@ -118,12 +118,20 @@ function region_manager_menu() {
 function region_manager_region_title($theme_key, $region) {
   static $list = array();
 
+  $output = '';
+
   if (!array_key_exists($theme_key, $list)) {
     $info = unserialize(db_result(db_query("SELECT info FROM {system} WHERE type = 'theme' AND name = '%s'", $theme_key)));
     $list[$theme_key] = array_map('t', $info['regions']);
   }
 
-  return $list[$theme_key][$region];
+  $output = $list[$theme_key][$region];
+
+  if ($path = $_REQUEST['destination']) {
+    $output .= ' '. t('on @path', array('@path' => _region_manager_path_name($path)));
+  }
+
+  return $output;
 }
 
 /**
@@ -218,7 +226,6 @@ function region_manager_region_list($theme_key) {
  *   A string containing the key for the active theme.
  * @param $region
  *   A string containing the region to be managed.
- *
  * @return
  *   A string containing the link wrapped in a div.
  *
@@ -236,51 +243,60 @@ function theme_region_manager_region_menu($theme_key, $region) {
  * Loader function for regions by theme or rid.
  *
  * @param $theme_key
- *   A string containing either a theme key only, or theme key and region name
- *   delimited by ':'.
+ *   A string containing the name of the theme.
+ * @param $reset
+ *   Boolean, if TRUE the cache will be flushed.
  * @return
  *   A single record in array format, or FALSE if none matched the incoming ID.
  */
-function region_manager_regions_load($rid) {
-  $regions = array();
+function region_manager_regions_load($theme_key, $reset = FALSE) {
+  static $records = array();
 
-  $sql = "SELECT * FROM {region_manager_regions} WHERE rid LIKE '%s%%'";
-  $result = db_query($sql, $rid);
-  while ($region = db_fetch_array($result)) {
-    $region['modules'] = unserialize($region['modules']);
-    $region['blocked_blocks'] = explode(', ', $region['blocked_blocks']);
-    $regions[$region['rid']] = $region;
+  $cache_key = 'region_manager:'. $theme_key;
+
+  if ($reset) {
+    cache_clear_all($cache_key, 'cache');
+    $records = array();
   }
 
-  return $regions;
+  if (!empty($records)) {
+    return $records;
+  }
+
+  if (($cache = cache_get($cache_key, 'cache')) && is_array($cache->data)) {
+    $records = $cache->data;
+  }
+  else {
+    $sql = "SELECT * FROM {region_manager_regions} WHERE theme_key = '%s'";
+    $result = db_query($sql, $theme_key);
+  
+    while ($record = db_fetch_array($result)) {
+      $record['modules'] = unserialize($record['modules']);
+      $record['blocked_blocks'] = explode(', ', $record['blocked_blocks']);
+      $records[$record['region']] = $record;
+    }
+    cache_set($cache_key, $records);
+  }
+
+  return $records;
 }
 
 /**
  * Public loader function for the full collection of records.
  *
- * In situations where the module's data rarely changes, or is being used
- * frequently (for example, loaded and processed on every page load), this
- * is a prime candidate for caching. See The Beginner's Guide to Caching at
- * http://www.lullabot.com/articles/a_beginners_guide_to_caching_data for more
- * details.
- *
- * This function assumes that results should be sorted by 'weight' -- if your
- * module doesn't store a weight column on its records, or if you need to sort
- * on some other property, this function's SQL should be updated as well.
- *
  * @return
  *   An array of all records, keyed by id.
  */
 function region_manager_regions_load_all() {
-  $sql = 'SELECT * FROM {region_manager_blocks} ORDER BY theme ASC';
+  $sql = 'SELECT * FROM {region_manager_regions} ORDER BY rid ASC';
   $result = db_query($sql);
 
-  $regions = array();
-  while ($region = db_fetch_array($result)) {
-    $region['modules'] = unserialize($region['modules']);
-    $regions[$region['rid']] = $region;
+  $records = array();
+  while ($record = db_fetch_array($result)) {
+    $record['modules'] = unserialize($record);
+    $records[$record['rid']] = $record;
   }
-  return $regions;
+  return $records;
 }
 
 /**
@@ -292,8 +308,12 @@ function region_manager_regions_load_all() {
  *   The saved record.
  */
 function region_manager_region_save($region) {
-  region_manager_region_delete($region['rid']);
-  drupal_write_record('region_manager_regions', $region);
+  if (isset($region['rid'])) {
+    drupal_write_record('region_manager_regions', $region, 'rid');
+  }
+  else {
+    drupal_write_record('region_manager_regions', $region);
+  }
   return $region;
 }
 
@@ -301,10 +321,10 @@ function region_manager_region_save($region) {
  * Deletes a record, given its unique ID.
  *
  * @param $rid
- *   A string containing the ID of a record.
+ *   An integer containing the ID of a record.
  */
 function region_manager_region_delete($rid) {
-  $sql = "DELETE FROM {region_manager_regions} WHERE rid = '%s'";
+  $sql = "DELETE FROM {region_manager_regions} WHERE rid = %d";
   db_query($sql, $rid);
 }
 
@@ -333,13 +353,11 @@ function region_manager_blocks_load_all($theme_key, $region = NULL) {
 
   if (is_null($region)) {
     foreach(array_keys(region_manager_region_list($theme_key)) as $region) {
-      $rid = $theme_key .':'. $region;
-      $blocks[$region] = _region_manager_blocks_filter($region, $all_blocks, $records[$rid]);
+      $blocks[$region] = _region_manager_blocks_filter($region, $all_blocks, $records[$region]);
     }
   }
   else {
-    $rid = $theme_key .':'. $region;
-    $blocks = _region_manager_blocks_filter($region, $all_blocks, $records[$rid]);
+    $blocks = _region_manager_blocks_filter($region, $all_blocks, $records[$region]);
   }
 
   return $blocks;
@@ -498,4 +516,14 @@ function _region_manager_block_name($case = 'lower') {
     return strtolower($name);
   }
   return ucfirst($name);
+}
+
+/**
+ * Helper function to output a path name or alias.
+ */
+function _region_manager_path_name($path) {
+  $frontpage = variable_get('site_frontpage', 'node');
+  $alias = ($path == $frontpage) ? t('home page') : drupal_get_path_alias($path);
+
+  return $alias;
 }

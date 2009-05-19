@@ -1,31 +1,25 @@
-// $Id$
+// $Id: region_manager.js,v 1.1.2.3 2009/05/13 18:56:06 q0rban Exp $
 
-$(function() {
-  // Move the textfields next to the label for the Use custom title radio.
-  /*
-  $('td.block div.region-manager-block-title-wrapper input.form-text').each(function () {
-    var title = $(this).parent();
-    $('input.form-radio', title.prev().children()).each(function () {
-      if ($(this).val() == 1) {
-        $(this).parent().parent().append(title);
-      }
-    });
-  });
-  */
-
+/**
+ * Show/hide form elements for editing a block title.
+ */
+Drupal.behaviors.blockTitle = function() {
+  // Show hide the textfield depending on the radio states.
   $('input.region-manager-manage-form-title-status').change(function() {
     if (this.checked) {
-      var id = $(this).attr('id');
       var textfield = $('input.form-text', $(this).parents('td.block'));
       switch (this.value) {
+        // Default Title
         case '0':
           textfield.val('').hide('fast');
           break;
 
+        // Disable Title
         case '1':
           textfield.val('<none>').hide();
           break;
 
+        // Custom Title
         case '2':
           if (textfield.val() == '<none>') {
             textfield.val('');
@@ -36,12 +30,12 @@ $(function() {
     }
   });
 
-  // Simulate a change so we can disable the title field if need be.
+  // Instantiate a change so we can hide the title field if need be.
   $('input.region-manager-manage-form-title-status').change();
 
-  $('td.title-link a').click(function() {
-    var class = $(this).attr('class');
-    var wrapper = $('div.' + class);
+  $('td.operations a').click(function() {
+    var className = $(this).attr('class');
+    var wrapper = $('div.' + className);
     if (wrapper.is(':hidden')) {
       wrapper.show('fast');
     }
@@ -50,98 +44,4 @@ $(function() {
     }
     return false;
   });
-});
-
-/**
- * Move a block in the blocks table from one region to another via select list.
- *
- * This behavior is dependent on the tableDrag behavior, since it uses the
- * objects initialized in that behavior to update the row.
- */
-Drupal.behaviors.blockDrag = function(context) {
-  var table = $('table#blocks');
-  var tableDrag = Drupal.tableDrag.blocks; // Get the blocks tableDrag object.
-
-  // Add a handler for when a row is swapped, update empty regions.
-  tableDrag.row.prototype.onSwap = function(swappedRow) {
-    checkEmptyRegions(table, this);
-  };
-
-  // A custom message for the blocks page specifically.
-  Drupal.theme.tableDragChangedWarning = function () {
-    return '<div class="warning">' + Drupal.theme('tableDragChangedMarker') + ' ' + Drupal.t("The changes to these @blocks will not be saved until the <em>@save</em> button is clicked.", { '@block' : Drupal.settings.block_name, '@save' : "Save " + Drupal.settings.block_name }) + '</div>';
-  };
-
-  // Add a handler so when a row is dropped, update fields dropped into new regions.
-  tableDrag.onDrop = function() {
-    dragObject = this;
-    if ($(dragObject.rowObject.element).prev('tr').is('.region-message')) {
-      var regionRow = $(dragObject.rowObject.element).prev('tr').get(0);
-      var regionName = regionRow.className.replace(/([^ ]+[ ]+)*region-([^ ]+)-message([ ]+[^ ]+)*/, '$2');
-      var regionField = $('select.block-region-select', dragObject.rowObject.element);
-      var weightField = $('select.block-weight', dragObject.rowObject.element);
-      var oldRegionName = weightField[0].className.replace(/([^ ]+[ ]+)*block-weight-([^ ]+)([ ]+[^ ]+)*/, '$2');
-
-      if (!regionField.is('.block-region-'+ regionName)) {
-        regionField.removeClass('block-region-' + oldRegionName).addClass('block-region-' + regionName);
-        weightField.removeClass('block-weight-' + oldRegionName).addClass('block-weight-' + regionName);
-        regionField.val(regionName);
-      }
-    }
-  };
-
-  // Add the behavior to each region select list.
-  $('select.block-region-select:not(.blockregionselect-processed)', context).each(function() {
-    $(this).change(function(event) {
-      // Make our new row and select field.
-      var row = $(this).parents('tr:first');
-      var select = $(this);
-      tableDrag.rowObject = new tableDrag.row(row);
-
-      // Find the correct region and insert the row as the first in the region.
-      $('tr.region-message', table).each(function() {
-        if ($(this).is('.region-' + select[0].value + '-message')) {
-          // Add the new row and remove the old one.
-          $(this).after(row);
-          // Manually update weights and restripe.
-          tableDrag.updateFields(row.get(0));
-          tableDrag.rowObject.changed = true;
-          if (tableDrag.oldRowElement) {
-            $(tableDrag.oldRowElement).removeClass('drag-previous');
-          }
-          tableDrag.oldRowElement = row.get(0);
-          tableDrag.restripeTable();
-          tableDrag.rowObject.markChanged();
-          tableDrag.oldRowElement = row;
-          $(row).addClass('drag-previous');
-        }
-      });
-
-      // Modify empty regions with added or removed fields.
-      checkEmptyRegions(table, row);
-      // Remove focus from selectbox.
-      select.get(0).blur();
-    });
-    $(this).addClass('blockregionselect-processed');
-  });
-
-  var checkEmptyRegions = function(table, rowObject) {
-    $('tr.region-message', table).each(function() {
-      // If the dragged row is in this region, but above the message row, swap it down one space.
-      if ($(this).prev('tr').get(0) == rowObject.element) {
-        // Prevent a recursion problem when using the keyboard to move rows up.
-        if ((rowObject.method != 'keyboard' || rowObject.direction == 'down')) {
-          rowObject.swap('after', this);
-        }
-      }
-      // This region has become empty
-      if ($(this).next('tr').not('.locked').is(':not(.draggable)') || $(this).next('tr').size() == 0) {
-        $(this).removeClass('region-populated').addClass('region-empty');
-      }
-      // This region has become populated.
-      else if ($(this).is('.region-empty')) {
-        $(this).removeClass('region-empty').addClass('region-populated');
-      }
-    });
-  };
 };

@@ -1,4 +1,4 @@
-// $Id$
+// $Id: region_manager.admin.js,v 1.1.2.1 2009/05/15 19:09:07 q0rban Exp $
 
 $(function() {
   // Block administration page.
@@ -24,10 +24,10 @@ showHideRows = function(module) {
     }
   });
   if (show) {
-    $('#region-manager-blocks-form tr[class^=' + module + ']').not('tr.' + module).show();
+    $('#region-manager-blocks-form tr.' + module + '-child').show();
   }
   else {
-    $('#region-manager-blocks-form tr[class^=' + module + ']').not('tr.' + module).hide();
+    $('#region-manager-blocks-form tr.' + module + '-child').hide();
   }
 }
 

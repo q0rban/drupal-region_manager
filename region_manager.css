@@ -1,4 +1,29 @@
-/* $Id$ */
+/* @override http://sandbox/sites/all/modules/region_manager-DRUPAL-6--1/region_manager.css?t */
+
+/* $Id: region_manager.css,v 1.1.2.2 2009/05/15 19:52:50 q0rban Exp $ */
+
+/* @group Region Manager menu link */
+
+div.region-manager-menu {
+	padding: 6px;
+	text-align: left;
+	border: 1px solid #d7d7d7;
+	background: #f5f5f5 url(images/bg_region-manager-menu.png) repeat-x 0 100%;
+}
+
+.region-manager-menu a {
+	line-height: 21px;
+	padding-left: 56px;
+	height: 18px;
+	display: block;
+	background: url(images/manage-icon.png) no-repeat;
+	font-size: 12px;
+	text-transform: uppercase;
+}
+
+/* @end */
+
+/* @group Region Manager Admin form */
 
 #region-manager-blocks-form tr.module td {
 	border-top: 1.5em solid #fff;
@@ -8,26 +33,111 @@
 	font-weight: bold;
 }
 
-html.js #region-manager-manage-form select.block-region-select,
+/* @end */
+
+/**************************
+ Region Manager Manage form 
+ **************************/
+
+#region-manager-manage-form td.rm-state {
+	font-weight: bold;
+	font-size: 1.2em;
+}
+
+#region-manager-manage-form table tbody,
+#region-manager-manage-form table tbody tr {
+	border: solid 1px #d3d3d3;
+}
+
+/* @group Region Manager Block Operations */
+
+#region-manager-manage-form td.operations {
+	text-align: right;
+	vertical-align: top;
+	display: none;
+}
+
+html.js #region-manager-manage-form td.operations {
+	display: block;
+}
+
+#region-manager-manage-form td.operations div.item-list ul,
+#region-manager-manage-form td.operations div.item-list ul li {
+	list-style: none;
+	background: none;
+	margin: 0;
+	padding: 0;
+	height: 36px;
+}
+
+#region-manager-manage-form td.operations li {
+	display: inline;
+}
+
+#region-manager-manage-form td.operations li a {
+	display: block;
+	float: right;
+	text-align: left;
+	text-indent: -9999px;
+	height: 36px;
+	background-repeat: no-repeat;
+	background-position: 0 0;
+}
+
+#region-manager-manage-form td.operations li a:hover {
+	background-position: 100% 0;
+}
+
+#region-manager-manage-form td.operations li.rm-block-configure-operation a {
+	width: 108px;
+	background-image: url(images/btn_configure.png);
+}
+
+#region-manager-manage-form td.operations li.rm-block-disable-operation a {
+	width: 94px;
+	background-image: url(images/btn_disable.png);
+}
+
+#region-manager-manage-form td.operations li.rm-block-add-operation a {
+	width: 74px;
+	background-image: url(images/btn_add.png);
+}
+
+#region-manager-manage-form td.operations li.rm-block-remove-operation a {
+	width: 100px;
+	background-image: url(images/btn_remove.png);
+}
+
+#region-manager-blocks-active-path td.operations li.rm-block-add-operation,
+#region-manager-blocks-available td.operations li.rm-block-remove-operation,
+#region-manager-blocks-available td.operations li.rm-block-disable-operation,
+#region-manager-blocks-available td.operations li.rm-block-configure-operation {
+	display: none;
+}
+
+/* @end */
+
+#region-manager-blocks-available .block-weight {
+	display: none;
+}
+
 html.js #region-manager-manage-form div.region-manager-block-title-wrapper,
-#region-manager-manage-form div.region-manager-block-title-wrapper div.form-radios,
-#region-manager-manage-form td.title-link a {
+#region-manager-manage-form div.region-manager-block-title-wrapper div.form-radios {
 	display: none;
 }
 
 html.js #region-manager-manage-form td.title-link a {
-  display: inline;
+	display: inline;
 }
 
 html.js #region-manager-manage-form div.region-manager-block-title-wrapper div.form-radios {
-  display: block;
+	display: block;
 }
 
 #region-manager-manage-form td.title-link {
-  text-align: right;
-  vertical-align: top;
+	text-align: right;
 }
 
 #region-manager-manage-form .draggable a.tabledrag-handle {
-  height: 100%;
+	height: 100%;
 }
