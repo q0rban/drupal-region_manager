@@ -32,7 +32,7 @@
   drupal_add_js(array('block_name' => _region_manager_block_name()), 'setting');
   foreach ($block_states as $state => $title) {
     //drupal_add_tabledrag('blocks', 'match', 'sibling', 'block-region-select', 'block-region-'. $region, NULL, FALSE);
-    drupal_add_tabledrag('region-manager-blocks-active_path', 'order', 'sibling', 'block-weight', 'block-weight-'. RM_BLOCK_ACTIVE_PATH);
+    drupal_add_tabledrag('region-manager-blocks-active_path', 'order', 'sibling', 'block-weight');
   }
 ?>
 
