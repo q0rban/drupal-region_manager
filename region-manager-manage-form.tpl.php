@@ -1,5 +1,5 @@
 <?php
-// $Id: region-manager-manage-form.tpl.php,v 1.1.2.3 2009/05/21 16:59:23 q0rban Exp $
+// $Id: region-manager-manage-form.tpl.php,v 1.1.2.5 2009/05/21 23:04:35 q0rban Exp $
 
 /**
  * @file block-admin-display-form.tpl.php
@@ -41,7 +41,7 @@
           <td colspan="4" class="rm-state"><?php print $title ?></td>
         </tr>
         <tr class="rm-state-message rm-state-<?php print $state?>-message <?php print empty($block_listing[$state]) ? 'rm-state-empty' : 'rm-state-populated'; ?>">
-          <td colspan="4"><em><?php print t('No @blocks @state', array('@block' => _region_manager_block_name(), '@state' => strtolower($title))); ?></em></td>
+          <td colspan="4"><em><?php print t('No @blocks @state.', array('@block' => _region_manager_block_name(), '@state' => strtolower($title))); ?></em></td>
         </tr>
         <?php foreach ($block_listing[$state] as $delta => $data): ?>
         <tr class="rm-block rm-block-<?php print $delta; ?> rm-state-<?php print $state ?> <?php print $row % 2 == 0 ? 'odd' : 'even'; ?><?php print $data->row_class ? ' '. $data->row_class : ''; ?>">

@@ -1,5 +1,5 @@
 <?php
-// $Id: region_manager.module,v 1.1.2.8 2009/05/21 21:57:06 q0rban Exp $
+// $Id: region_manager.module,v 1.1.2.9 2009/05/21 23:04:35 q0rban Exp $
 
 /**
  * @file
@@ -17,9 +17,28 @@ define('REGION_MANAGER_CUSTOM', 2);
  * Implementation of hook_help().
  */
 function region_manager_help($path, $arg) {
+  global $theme_info;
+
   switch ($path) {
     case 'admin/settings/region_manager/regions':
       return t('Please select for each theme which regions you would like to have region manager available on.');
+
+    case 'admin/build/region_manager/%/%':
+      if (empty($theme_info)) {
+        init_theme();
+      }
+
+      $region = $arg[4];
+      $path = _region_manager_path_name($_REQUEST['destination']);
+
+      $t_args = array(
+        '@region' => $theme_info->info['regions'][$region],
+        '%path' => _region_manager_path_name($path),
+        '@nodeblock' => function_exists('nodeblock_block') ? ' create new,' : '',
+        '@block' => _region_manager_block_name(),
+      );
+
+      return t('You are managing the @region as it displays on %path. Add existing,@nodeblock remove, disable @blocks, or drag and drop to reorder them.', $t_args);
   }
 }
 
