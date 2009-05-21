@@ -1,6 +1,4 @@
-/* @override http://sandbox/sites/all/modules/region_manager-DRUPAL-6--1/region_manager.css?B */
-
-/* $Id: region_manager.css,v 1.1.2.3 2009/05/21 02:50:13 q0rban Exp $ */
+/* $Id: region_manager.css,v 1.1.2.4 2009/05/21 16:59:23 q0rban Exp $ */
 
 /**************************
   Region Manager Menu link 
@@ -93,7 +91,8 @@ a.region-manager-nodeblock-menu-link {
 	outline: 0;
 }
 
-#region-manager-manage-form td.operations li a:hover {
+#region-manager-manage-form td.operations li a:hover,
+a.region-manager-nodeblock-menu-link:hover {
 	background-position: 100% 0;
 }
 
