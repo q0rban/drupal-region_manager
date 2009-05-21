@@ -145,17 +145,17 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
 
     $form[$key]['#attributes']['class'] = 'draggable';
 
-    if ($block['visibility'] != 1) {
+    if ($block['status']) {
       // We can't allow dragging of items if the block visibility isn't 1 and the block is active.
-      if ($block['status']) {
+      if ($block['visibility'] != 1) {
         $form[$key]['#attributes']['class'] .= ' locked';
         $form[$key]['info']['#value'] .= ' '. t('(Locked)');
         $form[$key]['state']['#default_value'] = 'active_path';
       }
-      // Otherwise we flag this block as being disabled, to aid in processing the form after submission.
-      else {
-        $form[$key]['disabled'] = array('#type' => 'hidden', '#value' => TRUE);
-      }
+    }
+    // Otherwise we flag this block as being disabled, to aid in processing the form after submission.
+    else {
+      $form[$key]['disabled'] = array('#type' => 'hidden', '#value' => TRUE);
     }
   }
 
@@ -179,24 +179,30 @@ function region_manager_manage_form_submit($form, &$form_state) {
   $path = ($path == $frontpage) ? '<front>' : $path;
 
   foreach ($form_state['values'] as $key => $block) {
-    // Set the block status.
-    $block['status'] = $block['state'] != 'disabled';
+    // Clean up the title.
     $block['title'] = trim($block['title']);
 
-    // Now let's go through our different scenarios for enabled blocks.
-    if ($block['status']) {
-      // Set the region.
-      $block['region'] = $region;
+    // Now let's go through our different states.
+    switch($block['state']) {
+      case RM_BLOCK_ACTIVE_PATH:
+        $block['region'] = $region;
+        $block['status'] = 1;
 
-      // If the block is enabled for this path, we have to add the path to $block['pages'].
-      if ($path && ($block['state'] == 'active_path')) {
-        if (!preg_match('/^'. preg_quote($path, '/') .'$/im', $block['pages'])) {
+        // If the block was originally disabled, we need to set it up for our usage.
+        if ($block['disabled']) {
+          $block['visibility'] = 1;
+          $block['pages'] = $path;
+        }
+        // Otherwise, all we need to do is add our path to pages.
+        elseif (($block['visibility'] == 1) && !preg_match('/^'. preg_quote($path, '/') .'$/im', $block['pages'])) {
           $block['pages'] .= empty($block['pages']) ? $path : "\n". $path;
         }
-      }
-      // Otherwise, if it's active, but not enabled for this path, make sure 
-      // we remove the path from $block['pages']
-      elseif ($block['state'] == 'active') {
+        break;
+
+      case RM_BLOCK_ACTIVE:
+        $block['region'] = $region;
+        $block['status'] = 1;
+
         // Remove path from the pages.
         $block['pages'] = trim(preg_replace('/^'. preg_quote($path, '/') .'$/im', '', $block['pages']));
 
@@ -206,23 +212,19 @@ function region_manager_manage_form_submit($form, &$form_state) {
           $block['status'] = 0;
           $block['region'] = '';
         }
-      }
+        break;
 
-      // If the block was originally disabled, we need to set it up for our usage.
-      if ($block['disabled']) {
-        $block['visibility'] = 1;
-        $block['pages'] = $path;
-      }
+      case RM_BLOCK_DISABLED:
+        $block['region'] = '';
+        if ($block['visibility'] == 1) {
+          $block['pages'] = '';
+        }
+        break;
     }
-    // If the block is disabled, clean up pages.
-    else {
-      $block['region'] = '';
-      if ($block['visibility'] == 1) {
-        $block['pages'] = '';
-      }
-    }
+
     db_query("UPDATE {blocks} SET status = %d, weight = %d, region = '%s', visibility = %d, pages = '%s', title = '%s' WHERE module = '%s' AND delta = '%s' AND theme = '%s'", $block['status'], $block['weight'], $block['region'], $block['visibility'], $block['pages'], $block['title'], $block['module'], $block['delta'], $block['theme']);
   }
+
   drupal_set_message(t('The @block settings have been updated.', array('@block' => _region_manager_block_name())));
   cache_clear_all();
 }
