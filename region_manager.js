@@ -48,7 +48,7 @@ Drupal.behaviors.regionManagerOperations = function() {
 
     switch(op) {
       case 'add':
-        row.insertAfter('table#region-manager-blocks-active_path tr.rm-state-message').each(function() { tableDragObj.makeDraggable(this) });
+        row.appendTo('table#region-manager-blocks-active_path').each(function() { tableDragObj.makeDraggable(this) });
         $('select.block-state-select', row).val('active_path');
         break;
         
