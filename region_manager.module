@@ -18,7 +18,7 @@ define('REGION_MANAGER_CUSTOM', 2);
  */
 function region_manager_help($path, $arg) {
   switch ($path) {
-    case 'admin/settings/region_manager':
+    case 'admin/settings/region_manager/regions':
       return t('Please select for each theme which regions you would like to have region manager available on.');
   }
 }
