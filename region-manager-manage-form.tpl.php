@@ -1,5 +1,5 @@
 <?php
-// $Id: region-manager-manage-form.tpl.php,v 1.1.2.1 2009/05/18 01:38:26 q0rban Exp $
+// $Id: region-manager-manage-form.tpl.php,v 1.1.2.2 2009/05/21 02:50:13 q0rban Exp $
 
 /**
  * @file block-admin-display-form.tpl.php

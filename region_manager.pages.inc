@@ -1,5 +1,5 @@
 <?php
-// $Id: region_manager.pages.inc,v 1.1.2.5 2009/05/18 19:44:34 q0rban Exp $
+// $Id: region_manager.pages.inc,v 1.1.2.6 2009/05/21 02:50:13 q0rban Exp $
 
 /**
  * Define our states.
