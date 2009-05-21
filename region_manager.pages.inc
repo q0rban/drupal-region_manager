@@ -1,5 +1,5 @@
 <?php
-// $Id: region_manager.pages.inc,v 1.1.2.7 2009/05/21 16:59:23 q0rban Exp $
+// $Id: region_manager.pages.inc,v 1.1.2.8 2009/05/21 17:10:36 q0rban Exp $
 
 /**
  * Define our states.
@@ -299,12 +299,14 @@ function _region_manager_manage_form_state_wrappers(&$vars, $state) {
   $vars['state_prefix'][$state] = $vars['state_suffix'][$state] = '';
 
   switch($state) {
+    case RM_BLOCK_ACTIVE_PATH:
+      $vars['state_prefix'][$state] = '<div id="region-manager-active-path-nodeblock-wrapper">';
     case RM_BLOCK_ACTIVE:
       // Output the available content blocks to be added, if nodeblock is enabled.
       if (function_exists('nodeblock_block') && _region_manager_nodeblock_status($theme_key, $region) && ($links = _region_manager_nodeblock_links($theme_key, $region))) {
         $vars['state_prefix'][$state] = theme('region_manager_nodeblock_menu', $links);
       }
-      $vars['state_prefix'][$state] .= '<div id="region-manager-active-disabled-tables-wrapper">';
+      $vars['state_prefix'][$state] .= '</div><div id="region-manager-active-disabled-tables-wrapper">';
       break;
 
     case RM_BLOCK_DISABLED:

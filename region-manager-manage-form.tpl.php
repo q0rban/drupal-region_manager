@@ -1,5 +1,5 @@
 <?php
-// $Id: region-manager-manage-form.tpl.php,v 1.1.2.2 2009/05/21 02:50:13 q0rban Exp $
+// $Id: region-manager-manage-form.tpl.php,v 1.1.2.3 2009/05/21 16:59:23 q0rban Exp $
 
 /**
  * @file block-admin-display-form.tpl.php
@@ -34,25 +34,27 @@
 <?php foreach ($block_states as $state => $title): ?>
   <?php $row = 0; ?>
   <?php print $state_prefix[$state] ?>
-  <table id="region-manager-blocks-<?php print $state; ?>">
-    <tbody>
-      <tr class="rm-state rm-state-<?php print $state ?>">
-        <td colspan="4" class="rm-state"><?php print $title ?></td>
-      </tr>
-      <tr class="rm-state-message rm-state-<?php print $state?>-message <?php print empty($block_listing[$state]) ? 'rm-state-empty' : 'rm-state-populated'; ?>">
-        <td colspan="4"><em><?php print t('No @blocks @state', array('@block' => _region_manager_block_name(), '@state' => strtolower($title))); ?></em></td>
-      </tr>
-      <?php foreach ($block_listing[$state] as $delta => $data): ?>
-      <tr class="rm-block rm-block-<?php print $delta; ?> rm-state-<?php print $state ?> <?php print $row % 2 == 0 ? 'odd' : 'even'; ?><?php print $data->row_class ? ' '. $data->row_class : ''; ?>">
-        <td class="block"><?php print $data->block_title; ?></td>
-        <td class="state"><?php print $data->state_select; ?></td>
-        <td class="weight"><?php print $data->weight_select; ?></td>
-        <td class="operations"><?php print $data->operations; ?></td>
-      </tr>
-      <?php $row++; ?>
-      <?php endforeach; ?>
-    </tbody>
-  </table>
+  <div class="table-wrapper">
+    <table id="region-manager-blocks-<?php print $state; ?>">
+      <tbody>
+        <tr class="rm-state rm-state-<?php print $state ?>">
+          <td colspan="4" class="rm-state"><?php print $title ?></td>
+        </tr>
+        <tr class="rm-state-message rm-state-<?php print $state?>-message <?php print empty($block_listing[$state]) ? 'rm-state-empty' : 'rm-state-populated'; ?>">
+          <td colspan="4"><em><?php print t('No @blocks @state', array('@block' => _region_manager_block_name(), '@state' => strtolower($title))); ?></em></td>
+        </tr>
+        <?php foreach ($block_listing[$state] as $delta => $data): ?>
+        <tr class="rm-block rm-block-<?php print $delta; ?> rm-state-<?php print $state ?> <?php print $row % 2 == 0 ? 'odd' : 'even'; ?><?php print $data->row_class ? ' '. $data->row_class : ''; ?>">
+          <td class="block"><?php print $data->block_title; ?></td>
+          <td class="state"><?php print $data->state_select; ?></td>
+          <td class="weight"><?php print $data->weight_select; ?></td>
+          <td class="operations"><?php print $data->operations; ?></td>
+        </tr>
+        <?php $row++; ?>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
   <?php print $state_suffix[$state] ?>
 <?php endforeach; ?>
 
