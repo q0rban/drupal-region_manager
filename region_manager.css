@@ -1,5 +1,3 @@
-/* @override http://sandbox/sites/all/modules/region_manager-DRUPAL-6--1/region_manager.css?t */
-
 /* $Id: region_manager.css,v 1.1.2.3 2009/05/21 02:50:13 q0rban Exp $ */
 
 /* @group Region Manager menu link */
@@ -44,9 +42,13 @@ div.region-manager-menu {
 	font-size: 1.2em;
 }
 
-#region-manager-manage-form table tbody,
-#region-manager-manage-form table tbody tr {
-	border: solid 1px #d3d3d3;
+#region-manager-manage-form table tbody{
+	border: 0;
+}
+
+/* Nodeblock Menu */
+div.region-manager-nodeblock-menu div.item-list {
+  display: none;
 }
 
 /* @group Region Manager Block Operations */

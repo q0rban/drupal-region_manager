@@ -15,14 +15,9 @@
  * Each $data in $block_listing[$state] contains:
  * - $data->region_title: Region title for the listed block.
  * - $data->block_title: Block title.
- * - $data->region_select: Drop-down menu for assigning a region.
+ * - $data->state_select: Drop-down menu for assigning a state.
  * - $data->weight_select: Drop-down menu for setting weights.
- * - $data->throttle_check: Checkbox to enable throttling.
- * - $data->configure_link: Block configuration link.
- * - $data->delete_link: For deleting user added blocks.
- *
- * @see template_preprocess_block_admin_display_form()
- * @see theme_block_admin_display()
+ * - $data->operations: Row containing all the operations for the block.
  */
 ?>
 <?php
@@ -38,6 +33,7 @@
 
 <?php foreach ($block_states as $state => $title): ?>
   <?php $row = 0; ?>
+  <?php print $state_prefix[$state] ?>
   <table id="region-manager-blocks-<?php print $state; ?>">
     <tbody>
       <tr class="rm-state rm-state-<?php print $state ?>">
@@ -57,6 +53,7 @@
       <?php endforeach; ?>
     </tbody>
   </table>
+  <?php print $state_suffix[$state] ?>
 <?php endforeach; ?>
 
 <?php print $form_submit; ?>

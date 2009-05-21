@@ -26,11 +26,6 @@ define('RM_BLOCK_DISABLED', 'disabled');
 function region_manager_manage($theme_key, $region) {
   $output = '';
 
-  // Output the available content blocks to be added, if nodeblock is enabled.
-  if (function_exists('nodeblock_block') && _region_manager_nodeblock_status($theme_key, $region)) {
-    $output .= theme('region_manager_nodeblock_menu', _region_manager_nodeblock_links($theme_key, $region));
-  }
-
   // Fetch and sort blocks
   $blocks = region_manager_blocks_load_all($theme_key, $region);
 
@@ -74,7 +69,7 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
   }
 
   // Now add the Active and Disabled row labels.
-  $block_states[RM_BLOCK_ACTIVE] = t('Active');
+  $block_states[RM_BLOCK_ACTIVE] = t('Active elsewhere');
   $block_states[RM_BLOCK_DISABLED] = t('Disabled');
 
   $form['#block_states'] = $block_states;
@@ -245,9 +240,11 @@ function template_preprocess_region_manager_manage_form(&$vars) {
   global $theme_key;
 
   $block_states = $vars['block_states'] = $vars['form']['#block_states'];
+  $vars['state_prefix'] = $vars['state_suffix'] = array();
 
-  foreach ($block_states as $key => $value) {
-    $vars['block_listing'][$key] = array();
+  foreach ($block_states as $state => $value) {
+    _region_manager_manage_form_state_wrappers($vars, $state);
+    $vars['block_listing'][$state] = array();
   }
 
   // Initialize disabled blocks array.
@@ -289,6 +286,28 @@ function template_preprocess_region_manager_manage_form(&$vars) {
   }
 
   $vars['form_submit'] = drupal_render($vars['form']);
+}
+
+/**
+ * Helper function to assemble the prefixes and suffixes for the state tables.
+ */
+function _region_manager_manage_form_state_wrappers(&$vars, $state) {
+  $vars['state_prefix'][$state] = $vars['state_suffix'][$state] = '';
+
+  switch($state) {
+    case RM_BLOCK_ACTIVE:
+      // Output the available content blocks to be added, if nodeblock is enabled.
+      if (function_exists('nodeblock_block') && _region_manager_nodeblock_status($theme_key, $region)) {
+        $vars['state_prefix'][$state] = theme('region_manager_nodeblock_menu', _region_manager_nodeblock_links($theme_key, $region));
+      }
+      $vars['state_prefix'][$state] .= '<div id="region-manager-active-disabled-tables-wrapper">';
+      break;
+
+    case RM_BLOCK_DISABLED:
+      $vars['state_suffix'][$state] = '</div>';
+  }
+
+  return $output;
 }
 
 /**
@@ -354,7 +373,12 @@ function theme_region_manager_nodeblock_menu($links) {
     return;
   }
   $output = '<div class="region-manager-nodeblock-menu">';
-  $output .= '<h4>'. t('Add new:') .'</h4>';
+  $t_args = array('@block' => _region_manager_block_name());
+  $options = array('attributes' => array(
+    'title' => t('Create and add a new content @block', $t_args),
+    'class' => 'region-manager-nodeblock-menu-link',
+  ));
+  $output .= '<h4>'. l(t('Create content @block', $t_args), 'node/add', $options) .'</h4>';
 
   $output .= theme('item_list', $links);
   $output .= '</div>';
