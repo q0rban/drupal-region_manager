@@ -1,5 +1,5 @@
 <?php
-// $Id: region_manager.module,v 1.1.2.4 2009/05/21 02:50:13 q0rban Exp $
+// $Id: region_manager.module,v 1.1.2.8 2009/05/21 21:57:06 q0rban Exp $
 
 /**
  * @file
@@ -126,10 +126,6 @@ function region_manager_region_title($theme_key, $region) {
   }
 
   $output = $list[$theme_key][$region];
-
-  if ($path = $_REQUEST['destination']) {
-    $output .= ' '. t('on @path', array('@path' => _region_manager_path_name($path)));
-  }
 
   return $output;
 }
