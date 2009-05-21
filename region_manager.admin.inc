@@ -1,5 +1,5 @@
 <?php
-// $Id: region_manager.admin.inc,v 1.1.2.2 2009/05/18 19:41:44 q0rban Exp $
+// $Id: region_manager.admin.inc,v 1.1.2.3 2009/05/21 14:34:30 q0rban Exp $
 
 /**
  * @file
@@ -154,6 +154,10 @@ function region_manager_blocks_form_submit($form, &$form_state) {
   $theme_key = $form['#theme_key'];
 
   foreach($regions as $region => $record) {
+    // Set up the region and theme key for this record.
+    $record['region'] = $region;
+    $record['theme_key'] = $theme_key;
+
     // Now go through the modules.
     foreach($record['modules'] as $module => $module_val) {
       foreach($record['blocked_blocks'][$module] as $delta => $block_val) {
