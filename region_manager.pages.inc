@@ -153,8 +153,9 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
     if ($block['visibility'] != 1) {
       // We can't allow dragging of items if the block visibility isn't 1 and the block is active.
       if ($block['status']) {
-        $form[$key]['#attributes']['class'] = 'locked';
+        $form[$key]['#attributes']['class'] .= ' locked';
         $form[$key]['info']['#value'] .= ' '. t('(Locked)');
+        $form[$key]['state']['#default_value'] = 'active_path';
       }
       // Otherwise we flag this block as being disabled, to aid in processing the form after submission.
       else {
@@ -184,24 +185,23 @@ function region_manager_manage_form_submit($form, &$form_state) {
 
   foreach ($form_state['values'] as $key => $block) {
     // Set the block status.
-    $block['status'] = $block['region'] != BLOCK_REGION_NONE;
+    $block['status'] = $block['state'] != 'disabled';
     $block['title'] = trim($block['title']);
 
     // Now let's go through our different scenarios for enabled blocks.
     if ($block['status']) {
-      // If the block is enabled for this path, we have to set the region and
-      // add the path to $block['pages'].
-      if ($path && ($block['region'] == 'active_path')) {
-        // Set the region.
-        $block['region'] = $region;
-        // Add the path to pages, if it's not already there.
+      // Set the region.
+      $block['region'] = $region;
+
+      // If the block is enabled for this path, we have to add the path to $block['pages'].
+      if ($path && ($block['state'] == 'active_path')) {
         if (!preg_match('/^'. preg_quote($path, '/') .'$/im', $block['pages'])) {
           $block['pages'] .= empty($block['pages']) ? $path : "\n". $path;
         }
       }
       // Otherwise, if it's active, but not enabled for this path, make sure 
       // we remove the path from $block['pages']
-      elseif ($block['region'] == $region) {
+      elseif ($block['state'] == 'active') {
         // Remove path from the pages.
         $block['pages'] = trim(preg_replace('/^'. preg_quote($path, '/') .'$/im', '', $block['pages']));
 
