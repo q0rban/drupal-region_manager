@@ -1,5 +1,5 @@
 <?php
-// $Id: region_manager.pages.inc,v 1.1.2.6 2009/05/21 02:50:13 q0rban Exp $
+// $Id: region_manager.pages.inc,v 1.1.2.7 2009/05/21 16:59:23 q0rban Exp $
 
 /**
  * Define our states.
@@ -294,6 +294,8 @@ function template_preprocess_region_manager_manage_form(&$vars) {
  * Helper function to assemble the prefixes and suffixes for the state tables.
  */
 function _region_manager_manage_form_state_wrappers(&$vars, $state) {
+  $theme_key = $vars['form']['#region_manager']['theme_key'];
+  $region    = $vars['form']['#region_manager']['region'];
   $vars['state_prefix'][$state] = $vars['state_suffix'][$state] = '';
 
   switch($state) {
