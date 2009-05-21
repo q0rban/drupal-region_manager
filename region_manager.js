@@ -44,10 +44,11 @@ Drupal.behaviors.regionManagerOperations = function() {
     var row = $('tr.' + rowClass);
     var configWrapper = $('div.region-manager-block-title-wrapper', row);
     var tableDragObj = Drupal.tableDrag['region-manager-blocks-active_path'];
+    var tables = $('#region-manager-manage-form table');
 
     switch(op) {
       case 'add':
-        row.addClass('draggable').insertAfter('table#region-manager-blocks-active_path tr.rm-state-message').each(function() { tableDragObj.makeDraggable(this) });
+        row.insertAfter('table#region-manager-blocks-active_path tr.rm-state-message').each(function() { tableDragObj.makeDraggable(this) });
         $('select.block-state-select', row).val('active_path');
         break;
         
@@ -61,21 +62,23 @@ Drupal.behaviors.regionManagerOperations = function() {
         break;
 
       case 'remove':
-        row.removeClass('draggable').insertAfter('table#region-manager-blocks-active tr.rm-state-message');
+        row.insertAfter('table#region-manager-blocks-active tr.rm-state-message');
         $('select.block-state-select', row).val('active');
         $('a.tabledrag-handle', row).remove();
         configWrapper.hide();
         break;
 
       case 'disable':
-        row.removeClass('draggable').insertAfter('table#region-manager-blocks-disabled tr.rm-state-message');
+        row.insertAfter('table#region-manager-blocks-disabled tr.rm-state-message');
         $('select.block-state-select', row).val('disabled');
         $('a.tabledrag-handle', row).remove();
         configWrapper.hide();
         break;
     }
-      $('tr', $('#region-manager-manage-form table'))
-    .filter(':odd').filter('.odd')
+    if (op != 'configure') {
+      tables.each(function() { checkEmptyRegions(this, row); });
+    }
+    $('tr', tables).filter(':odd').filter('.odd')
       .removeClass('odd').addClass('even')
     .end().end()
     .filter(':even').filter('.even')
@@ -84,5 +87,23 @@ Drupal.behaviors.regionManagerOperations = function() {
     return false;
   });
 
-  
+  var checkEmptyRegions = function(table, rowObject) {
+    $('tr.rm-state-message', table).each(function() {
+      // If the dragged row is in this region, but above the message row, swap it down one space.
+      if ($(this).prev('tr').get(0) == rowObject.element) {
+        // Prevent a recursion problem when using the keyboard to move rows up.
+        if ((rowObject.method != 'keyboard' || rowObject.direction == 'down')) {
+          rowObject.swap('after', this);
+        }
+      }
+      // This region has become empty
+      if ($(this).next('tr').is(':not(.draggable)') || $(this).next('tr').size() == 0) {
+        $(this).removeClass('rm-state-populated').addClass('rm-state-empty');
+      }
+      // This region has become populated.
+      else if ($(this).is('.rm-state-empty')) {
+        $(this).removeClass('rm-state-empty').addClass('rm-state-populated');
+      }
+    });
+  };
 }

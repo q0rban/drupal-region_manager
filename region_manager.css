@@ -109,6 +109,8 @@ html.js #region-manager-manage-form td.operations {
 	background-image: url(images/btn_remove.png);
 }
 
+#region-manager-manage-form tr.locked li.rm-block-remove-operation,
+#region-manager-manage-form tr.locked li.rm-block-disable-operation,
 #region-manager-blocks-active_path td.operations li.rm-block-add-operation,
 #region-manager-blocks-active_path tr.rm-state-disabled li.rm-block-remove-operation,
 #region-manager-blocks-active td.operations li.rm-block-configure-operation,
@@ -121,7 +123,9 @@ html.js #region-manager-manage-form td.operations {
 
 /* @end */
 
+tr.rm-state-populated,
 #region-manager-manage-form td.weight,
+#region-manager-manage-form td.state,
 html.js #region-manager-manage-form div.region-manager-block-title-wrapper,
 #region-manager-manage-form div.region-manager-block-title-wrapper div.form-radios {
 	display: none;
