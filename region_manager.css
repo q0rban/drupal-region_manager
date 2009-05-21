@@ -1,6 +1,10 @@
+/* @override http://sandbox/sites/all/modules/region_manager-DRUPAL-6--1/region_manager.css?B */
+
 /* $Id: region_manager.css,v 1.1.2.3 2009/05/21 02:50:13 q0rban Exp $ */
 
-/* @group Region Manager menu link */
+/**************************
+  Region Manager Menu link 
+ **************************/
 
 div.region-manager-menu {
 	padding: 6px;
@@ -19,9 +23,9 @@ div.region-manager-menu {
 	text-transform: uppercase;
 }
 
-/* @end */
-
-/* @group Region Manager Admin form */
+/**************************
+ Region Manager Admin form 
+ **************************/
 
 #region-manager-blocks-form tr.module td {
 	border-top: 1.5em solid #fff;
@@ -30,8 +34,6 @@ div.region-manager-menu {
 	color: #455067;
 	font-weight: bold;
 }
-
-/* @end */
 
 /**************************
  Region Manager Manage form 
@@ -46,8 +48,11 @@ div.region-manager-menu {
 	border: 0;
 }
 
-/* Nodeblock Menu */
-div.region-manager-nodeblock-menu div.item-list {
+/**************************
+      NodeBlock Menu 
+ **************************/
+
+div.region-manager-nodeblock-menu div.item-list-wrapper {
   display: none;
 }
 
@@ -76,7 +81,8 @@ html.js #region-manager-manage-form td.operations {
 	display: inline;
 }
 
-#region-manager-manage-form td.operations li a {
+#region-manager-manage-form td.operations li a,
+a.region-manager-nodeblock-menu-link {
 	display: block;
 	float: right;
 	text-align: left;
@@ -109,6 +115,12 @@ html.js #region-manager-manage-form td.operations {
 #region-manager-manage-form td.operations li.rm-block-remove-operation a {
 	width: 100px;
 	background-image: url(images/btn_remove.png);
+}
+
+a.region-manager-nodeblock-menu-link {
+	float: none;
+	width: 89px;
+	background-image: url(images/btn_create.png);
 }
 
 #region-manager-manage-form tr.locked li.rm-block-remove-operation,

@@ -299,8 +299,8 @@ function _region_manager_manage_form_state_wrappers(&$vars, $state) {
   switch($state) {
     case RM_BLOCK_ACTIVE:
       // Output the available content blocks to be added, if nodeblock is enabled.
-      if (function_exists('nodeblock_block') && _region_manager_nodeblock_status($theme_key, $region)) {
-        $vars['state_prefix'][$state] = theme('region_manager_nodeblock_menu', _region_manager_nodeblock_links($theme_key, $region));
+      if (function_exists('nodeblock_block') && _region_manager_nodeblock_status($theme_key, $region) && ($links = _region_manager_nodeblock_links($theme_key, $region))) {
+        $vars['state_prefix'][$state] = theme('region_manager_nodeblock_menu', $links);
       }
       $vars['state_prefix'][$state] .= '<div id="region-manager-active-disabled-tables-wrapper">';
       break;
@@ -371,19 +371,22 @@ function _region_manager_block_state($block, $path) {
  *   The HTML list of links.
  */
 function theme_region_manager_nodeblock_menu($links) {
-  if (empty($links)) {
-    return;
-  }
   $output = '<div class="region-manager-nodeblock-menu">';
+
+  // The arguments array for the t() func.
   $t_args = array('@block' => _region_manager_block_name());
+
+  // Link options.  We set a title here since we're going to be using
+  // a fancy button.
   $options = array('attributes' => array(
     'title' => t('Create and add a new content @block', $t_args),
     'class' => 'region-manager-nodeblock-menu-link',
   ));
   $output .= '<h4>'. l(t('Create content @block', $t_args), 'node/add', $options) .'</h4>';
 
+  $output .= '<div class="item-list-wrapper"><p>'. t('Click on a link below to create a new content @block.', $t_args) .'</p>';
   $output .= theme('item_list', $links);
-  $output .= '</div>';
+  $output .= '</div></div>';
 
   return $output;
 }

@@ -113,7 +113,7 @@ Drupal.behaviors.regionManagerOperations = function() {
  */
 Drupal.behaviors.regionManagerNodeBlock = function() {
   $('a.region-manager-nodeblock-menu-link').click(function() {
-    var typesList = $('div.region-manager-nodeblock-menu div.item-list');
+    var typesList = $('div.region-manager-nodeblock-menu div.item-list-wrapper');
     if (typesList.is(':hidden')) {
       typesList.show('fast');
     }
