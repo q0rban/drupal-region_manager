@@ -1,5 +1,5 @@
 <?php
-// $Id: region_manager.module,v 1.1.2.9 2009/05/21 23:04:35 q0rban Exp $
+// $Id: region_manager.module,v 1.1.2.10 2009/05/26 19:18:55 q0rban Exp $
 
 /**
  * @file
@@ -56,9 +56,9 @@ function region_manager_init() {
     drupal_add_css($path .'/region_manager.css');
 
     // Add the menus.
-    $regions = variable_get('region_manager_regions', array());
-    if (is_array($regions[$theme_key])) {
-      foreach($regions[$theme_key] as $region => $value) {
+    $regions = variable_get('region_manager_regions_'. $theme_key, array());
+    if (!empty($regions)) {
+      foreach($regions as $region => $value) {
         if ($value) {
           $menu = theme('region_manager_region_menu', $theme_key, $region);
           drupal_set_content($region, $menu);
@@ -227,11 +227,17 @@ function region_manager_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
  *   An array of regions in the form $region['name'] = 'description'.
  */
 function region_manager_region_list($theme_key) {
-  $settings = variable_get('region_manager_regions', array());
-  $regions = system_region_list($theme_key);
-  if (!empty($settings)) {
-    return array_intersect_key($regions, (array) array_filter($settings[$theme_key]));
+  static $region_list = array();
+
+  if (empty($region_list)) {
+    $settings = variable_get('region_manager_regions_'. $theme_key, array());
+    if (!empty($settings)) {
+      $regions = system_region_list($theme_key);
+      $region_list = array_intersect_key($regions, array_filter($settings));
+    }
   }
+
+  return $region_list;
 }
 
 /**

@@ -1,5 +1,5 @@
 <?php
-// $Id: region_manager.admin.inc,v 1.1.2.3 2009/05/21 14:34:30 q0rban Exp $
+// $Id: region_manager.admin.inc,v 1.1.2.4 2009/05/26 19:18:55 q0rban Exp $
 
 /**
  * @file
@@ -35,7 +35,6 @@ function region_manager_regions_form() {
 
   drupal_clear_css_cache();
   $themes = system_theme_data();
-  $settings = variable_get('region_manager_regions', array());
 
   module_load_include('inc', 'system', 'system.admin');
   uasort($themes, 'system_sort_modules_by_info_name');
@@ -43,18 +42,21 @@ function region_manager_regions_form() {
   $form['region_manager_regions']['#tree'] = TRUE;
 
   foreach($themes as $theme) {
+    $key = 'region_manager_regions_'. $theme->name;
+    $settings = variable_get($key, array());
+
     if ($theme->status) {
-      $form['region_manager_regions'][$theme->name] = array(
+      $form[$key] = array(
         '#type' => 'fieldset',
         '#title' => $theme->info['name'],
         '#tree' => TRUE,
       );
   
       foreach (system_region_list($theme->name) as $region => $title) {
-        $form['region_manager_regions'][$theme->name][$region] = array(
+        $form[$key][$region] = array(
           '#type' => 'checkbox',
           '#title' => $title,
-          '#default_value' => $settings[$theme->name][$region],
+          '#default_value' => $settings[$region],
         );
       }
     }

@@ -1,5 +1,5 @@
 <?php
-// $Id: region_manager.install,v 1.1.2.1 2009/05/18 19:41:44 q0rban Exp $
+// $Id: region_manager.install,v 1.1.2.2 2009/05/26 19:18:55 q0rban Exp $
 
 /**
  * @file
@@ -71,7 +71,6 @@ function region_manager_uninstall() {
   drupal_uninstall_schema('region_manager');
   cache_clear_all('region_manager:*', 'cache', TRUE);
   variable_del('region_manager_block_name');
-  variable_del('region_manager_regions');
 }
 
 /**
@@ -119,4 +118,20 @@ function region_manager_update_6100() {
   db_change_field($ret, 'region_manager_regions', 'rid', 'rid', $rid_field, $new_keys);
 
   return $ret;
+}
+
+/**
+ * Separate region settings into per theme variables.
+ */
+function region_manager_update_6101() {
+  $themes = variable_get('region_manager_regions', NULL);
+
+  if ($themes) {
+    foreach($themes as $theme_key => $regions) {
+      variable_set('region_manager_regions_'. $theme_key, $regions);
+    }
+    variable_del('region_manager_regions');
+  }
+
+  return array();
 }
