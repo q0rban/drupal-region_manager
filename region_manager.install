@@ -1,5 +1,5 @@
 <?php
-// $Id: region_manager.install,v 1.1.2.2 2009/05/26 19:18:55 q0rban Exp $
+// $Id: region_manager.install,v 1.1.2.3 2009/05/26 19:35:14 q0rban Exp $
 
 /**
  * @file
