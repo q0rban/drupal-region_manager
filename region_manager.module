@@ -1,5 +1,5 @@
 <?php
-// $Id: region_manager.module,v 1.1.2.10 2009/05/26 19:18:55 q0rban Exp $
+// $Id: region_manager.module,v 1.1.2.11 2009/05/27 16:53:34 q0rban Exp $
 
 /**
  * @file
@@ -255,7 +255,7 @@ function region_manager_region_list($theme_key) {
 function theme_region_manager_region_menu($theme_key, $region) {
   $dest = $_REQUEST['destination'] ? array('destination' => $_REQUEST['destination']) : drupal_get_destination();
 
-  $link = l(t('Manage'), "admin/build/region_manager/$theme_key/$region", array('query' => $dest, 'attributes' => array('title' => t('Manage @region', array('@region' => region_manager_region_title($theme_key, $region))))));
+  $link = l(t(region_manager_region_title($theme_key, $region)), "admin/build/region_manager/$theme_key/$region", array('query' => $dest, 'attributes' => array('title' => t('Manage this region'))));
 
   return "<div class='region-manager-menu'>$link</div>\n";
 }
