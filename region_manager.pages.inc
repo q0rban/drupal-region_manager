@@ -1,11 +1,17 @@
 <?php
-// $Id: region_manager.pages.inc,v 1.1.2.10 2009/05/21 21:56:34 q0rban Exp $
+// $Id: region_manager.pages.inc,v 1.1.2.13 2009/11/23 02:52:32 q0rban Exp $
 
 /**
  * Define our states.
  */
+
+// Block is active for the path.
 define('RM_BLOCK_ACTIVE_PATH', 'active_path');
+// Block is a content block and only visible on the page from which it was created.
+define('RM_BLOCK_ACTIVE_CONTENT', 'active_content');
+// Block is active elsewhere.
 define('RM_BLOCK_ACTIVE', 'active');
+// Block is disabled.
 define('RM_BLOCK_DISABLED', 'disabled');
 
 /**
@@ -23,14 +29,30 @@ define('RM_BLOCK_DISABLED', 'disabled');
  * @return
  *   The HTML output of the page.
  */
-function region_manager_manage($theme_key, $region) {
+function region_manager_manage($key, $region) {
+  global $theme_key;
+
   $output = '';
 
   // Fetch and sort blocks
-  $blocks = region_manager_blocks_load_all($theme_key, $region);
+  $blocks = region_manager_blocks_load_all($key, $region);
 
   module_load_include('inc', 'block', 'block.admin');
+
+  // If we're setting blocks for a theme different than the active theme,
+  // we need to temporarily override the global $theme_key var for
+  // _block_compare to work properly.
+  if ($theme_key != $key) {
+    $orig_theme = $theme_key;
+    $theme_key = $key;
+  }
+
   usort($blocks, '_block_compare');
+
+  // Now reset the $theme_key back if it was changed.
+  if ($orig_theme) {
+    $theme_key = $orig_theme;
+  }
 
   $output .= drupal_get_form('region_manager_manage_form', $blocks, $theme_key, $region);
 
@@ -97,13 +119,12 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
       '#value' => $block['delta'],
     );
 
-    // Block name.
-    // Remove (nodeblock) if it's in there.
-    $block['info'] = preg_replace('/\(nodeblock\)$/', t('(Content @block)', array('@block' => _region_manager_block_name())), $block['info']);
+    // Block administration name.
     $form[$key]['info'] = array(
-      '#value' => check_plain($block['info']),
+      '#value' => $block['info'], 
     );
 
+    // Block operations
     $form[$key]['operations'] = array(
       '#type' => 'markup',
       '#value' => _region_manager_block_operations($block, $key),
@@ -117,12 +138,26 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
       '#options' => array(t('Use Default Title'), t('Disable Title'), t('Use Custom Title')),
     );
 
+    // Block title
     $form[$key]['title'] = array(
       '#attributes' => array('class' => 'region-manager-manage-form-title'),
       '#type' => 'textfield',
       '#size' => 40,
       '#default_value' => $block['title'],
     );
+
+    // If this is a content block, we need to add a checkbox so the user can expose
+    // the block to other pages.
+    if ($block['visibility'] == -1) {
+      $form[$key]['expose'] = array(
+        '#type' => 'checkbox',
+        '#title' => 'Expose',
+        '#default_value' => FALSE,
+        '#description' => t('Expose this content @block to other pages.  <strong>NOTE: this cannot be undone.</strong>',  array('@block' => _region_manager_block_name())),
+      );
+    }
+
+    // Block weight
     $form[$key]['weight'] = array(
       '#type' => 'weight',
       '#default_value' => $block['weight'],
@@ -146,14 +181,16 @@ function region_manager_manage_form(&$form_state, $blocks, $theme_key, $region) 
     $form[$key]['#attributes']['class'] = 'draggable';
 
     if ($block['status']) {
-      // We can't allow dragging of items if the block visibility isn't 1 and the block is active.
-      if ($block['visibility'] != 1) {
+      // We can't allow removal of items if the block visibility is 0 (active on all 
+      // pages) or 2 (php code).
+      if ($block['visibility'] == 0 || $block['visibility'] == 2) {
         $form[$key]['#attributes']['class'] .= ' locked';
         $form[$key]['info']['#value'] .= ' '. t('(Locked)');
-        $form[$key]['state']['#default_value'] = 'active_path';
+        $form[$key]['state']['#default_value'] = RM_BLOCK_ACTIVE_PATH;
       }
     }
-    // Otherwise we flag this block as being disabled, to aid in processing the form after submission.
+    // Otherwise we flag this block as being disabled, to aid in processing the form 
+    // after submission.
     else {
       $form[$key]['disabled'] = array('#type' => 'hidden', '#value' => TRUE);
     }
@@ -193,6 +230,12 @@ function region_manager_manage_form_submit($form, &$form_state) {
           $block['visibility'] = 1;
           $block['pages'] = $path;
         }
+
+        // If this is a content block and 'expose' was checked, change visibility to 1.
+        if ($block['expose']) {
+          $block['visibility'] = 1;
+        }
+
         // Otherwise, all we need to do is add our path to pages.
         elseif (($block['visibility'] == 1) && !preg_match('/^'. preg_quote($path, '/') .'$/im', $block['pages'])) {
           $block['pages'] .= empty($block['pages']) ? $path : "\n". $path;
@@ -239,7 +282,7 @@ function region_manager_manage_form_submit($form, &$form_state) {
  * @see theme_region_manager_manage_form()
  */
 function template_preprocess_region_manager_manage_form(&$vars) {
-  global $theme_key;
+  $theme_key = $vars['form']['#region_manager']['theme_key'];
 
   $block_states = $vars['block_states'] = $vars['form']['#block_states'];
   $vars['state_prefix'] = $vars['state_suffix'] = array();
@@ -269,19 +312,16 @@ function template_preprocess_region_manager_manage_form(&$vars) {
       $vars['block_listing'][$state][$i]->row_class = isset($block['#attributes']['class']) ? $block['#attributes']['class'] : '';
       $vars['block_listing'][$state][$i]->block_modified = isset($block['#attributes']['class']) && strpos($block['#attributes']['class'], 'block-modified') !== FALSE ? TRUE : FALSE;
 
-      $vars['block_listing'][$state][$i]->block_title = '<strong class="block-info">'. drupal_render($block['info']) .'</strong>';
-      $vars['block_listing'][$state][$i]->block_title .= '<div class="region-manager-block-title-wrapper">';
-      $vars['block_listing'][$state][$i]->block_title .= drupal_render($block['title_status']) . drupal_render($block['title']);
-      $vars['block_listing'][$state][$i]->block_title .= '</div>';
+      $vars['block_listing'][$state][$i]->block_config = '<strong class="block-info">'. drupal_render($block['info']) .'</strong>';
+      $vars['block_listing'][$state][$i]->block_config .= '<div class="region-manager-block-config-wrapper">';
+      $vars['block_listing'][$state][$i]->block_config .= drupal_render($block['title_status']) . drupal_render($block['title']);
+      $vars['block_listing'][$state][$i]->block_config .= ($block['expose']) ? drupal_render($block['expose']) : '';
+      $vars['block_listing'][$state][$i]->block_config .= '</div>';
 
       $vars['block_listing'][$state][$i]->operations = drupal_render($block['operations']);
 
       $vars['block_listing'][$state][$i]->state_select = drupal_render($block['state']) . drupal_render($block['theme']);
       $vars['block_listing'][$state][$i]->weight_select = drupal_render($block['weight']);
-      $vars['block_listing'][$state][$i]->throttle_check = $vars['throttle'] ? drupal_render($block['throttle']) : '';
-      $vars['block_listing'][$state][$i]->configure_link = drupal_render($block['configure']);
-      $vars['block_listing'][$state][$i]->delete_link = !empty($block['delete']) ? drupal_render($block['delete']) : '';
-      $vars['block_listing'][$state][$i]->printed = FALSE;
 
       $last_state = $state;
     }
@@ -300,11 +340,15 @@ function _region_manager_manage_form_state_wrappers(&$vars, $state) {
 
   switch($state) {
     case RM_BLOCK_ACTIVE_PATH:
-      $vars['state_prefix'][$state] = '<div id="region-manager-active-path-nodeblock-wrapper">';
-      // Output the available content blocks to be added, if nodeblock is enabled.
-      if (function_exists('nodeblock_block') && _region_manager_nodeblock_status($theme_key, $region) && ($links = _region_manager_nodeblock_links($theme_key, $region))) {
-        $vars['state_prefix'][$state] .= theme('region_manager_nodeblock_menu', $links);
+      $vars['state_prefix'][$state] = '<div id="region-manager-active-path-wrapper">';
+      // Output the create links, if there are any.
+      if ($links = region_manager_create_links($theme_key, $region)) {
+        $vars['state_prefix'][$state] .= theme('region_manager_create_menu', $links);
       }
+      break;
+
+    case RM_BLOCK_ACTIVE_CONTENT:
+      $vars['state_prefix'][$state] = '</div><div id="region-manager-active-content-wrapper">';
       break;
 
     case RM_BLOCK_ACTIVE:
@@ -359,12 +403,19 @@ function _region_manager_block_operations($block, $key) {
  *   A string signifying the block state.
  */
 function _region_manager_block_state($block, $path) {
+  // Block is disabled and available for use.
   if ($block['status'] == 0) {
     return RM_BLOCK_DISABLED;
   }
+  // Block is active on this path.
   if (_region_manager_block_check_visibility($block, $path)) {
     return RM_BLOCK_ACTIVE_PATH;
   }
+  // Block is a content block and only visible on the page from which it was created.
+  if ($block['visibility'] == -1) {
+    return RM_BLOCK_ACTIVE_CONTENT;
+  }
+  // Block is active elsewhere.
   return RM_BLOCK_ACTIVE;
 }
 
@@ -376,8 +427,8 @@ function _region_manager_block_state($block, $path) {
  * @return
  *   The HTML list of links.
  */
-function theme_region_manager_nodeblock_menu($links) {
-  $output = '<div class="region-manager-nodeblock-menu">';
+function theme_region_manager_create_menu($links) {
+  $output = '<div class="region-manager-create-menu">';
 
   // The arguments array for the t() func.
   $t_args = array('@block' => _region_manager_block_name());
@@ -386,7 +437,7 @@ function theme_region_manager_nodeblock_menu($links) {
   // a fancy button.
   $options = array('attributes' => array(
     'title' => t('Create and add a new content @block', $t_args),
-    'class' => 'region-manager-nodeblock-menu-link',
+    'class' => 'region-manager-create-menu-link',
   ));
   $output .= '<h4>'. l(t('Create content @block', $t_args), 'node/add', $options) .'</h4>';
 
@@ -395,35 +446,6 @@ function theme_region_manager_nodeblock_menu($links) {
   $output .= '</div></div>';
 
   return $output;
-}
-
-/**
- * Loads a list of links to add new nodeblock content types.
- *
- * @param $theme_key
- *   A string containing the key of the active theme.
- * @param $region
- *   A string containing the region to be managed.
- * @return
- *   An array containing the available content types to add.
- */
-function _region_manager_nodeblock_links($theme_key, $region) {
-  $types = node_get_types();
-
-  foreach ($types as $type) {
-    if (nodeblock_type_enabled($type)) {
-      if (node_access('create', $type)) {
-        $options = array();
-        if ($path = $_REQUEST['destination']) {
-          $options['query'] = array('destination' => $path);
-        }
-        $type_url_str = str_replace('_', '-', $type->type);
-        $links[] = l(t('@type @block', array('@type' => $type->name, '@block' => _region_manager_block_name())), "node/add/$type_url_str/$theme_key/$region", $options);
-      }
-    }
-  }
-
-  return $links;
 }
 
 /**
@@ -450,20 +472,4 @@ function _region_manager_block_title_status($title) {
   }
 
   return $title_status;
-}
-
-/**
- * Checks to see if nodeblock is disabled for a specific region.
- *
- * @param $theme_key
- *   A string containing the key of the active theme.
- * @param $region
- *   A string containing the region to be managed.
- * @return
- *   Boolean TRUE if nodeblocks are available for the region
- */
-function _region_manager_nodeblock_status($theme_key, $region) {
-  $records = region_manager_regions_load($theme_key);
-
-  return !($records[$region]['modules']['nodeblock'] == REGION_MANAGER_ALL_DISABLED);
 }

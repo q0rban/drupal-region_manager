@@ -1,4 +1,4 @@
-$Id: README.txt,v 1.1 2009/05/12 15:56:50 q0rban Exp $
+$Id: README.txt,v 1.1.2.1 2009/11/20 21:55:47 q0rban Exp $
 
 ********************************************************************************
 Region Manager provides a simple interface to manage blocks, and combined with
@@ -12,4 +12,9 @@ per module, or even per block.  For example, you can specify that menu module
 blocks are only available in the header, or that the navigation menu block is
 not available for any region.
 
-Recommended additional modules are nodeblock, and region_visibility.
+Recommended additional modules are NodeBlock, and Visibility API.
+
+Region Manager also allows you to implement your own block creation methods.
+Please see region_manager.nodeblock.inc for an example.  Note: You may need to
+implement your own submit handler, depending on what kind of block you are 
+creating.  See region_manager_nodeapi() for an example.

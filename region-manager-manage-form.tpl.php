@@ -1,5 +1,5 @@
 <?php
-// $Id: region-manager-manage-form.tpl.php,v 1.1.2.5 2009/05/21 23:04:35 q0rban Exp $
+// $Id: region-manager-manage-form.tpl.php,v 1.1.2.6 2009/11/23 02:52:32 q0rban Exp $
 
 /**
  * @file block-admin-display-form.tpl.php
@@ -14,7 +14,7 @@
  *
  * Each $data in $block_listing[$state] contains:
  * - $data->region_title: Region title for the listed block.
- * - $data->block_title: Block title.
+ * - $data->block_config: Block title and other config options.
  * - $data->state_select: Drop-down menu for assigning a state.
  * - $data->weight_select: Drop-down menu for setting weights.
  * - $data->operations: Row containing all the operations for the block.
@@ -45,7 +45,7 @@
         </tr>
         <?php foreach ($block_listing[$state] as $delta => $data): ?>
         <tr class="rm-block rm-block-<?php print $delta; ?> rm-state-<?php print $state ?> <?php print $row % 2 == 0 ? 'odd' : 'even'; ?><?php print $data->row_class ? ' '. $data->row_class : ''; ?>">
-          <td class="block"><?php print $data->block_title; ?></td>
+          <td class="block"><?php print $data->block_config; ?></td>
           <td class="state"><?php print $data->state_select; ?></td>
           <td class="weight"><?php print $data->weight_select; ?></td>
           <td class="operations"><?php print $data->operations; ?></td>

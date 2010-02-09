@@ -1,5 +1,5 @@
 <?php
-// $Id: region_manager.admin.inc,v 1.1.2.4 2009/05/26 19:18:55 q0rban Exp $
+// $Id: region_manager.admin.inc,v 1.1.2.8 2009/08/26 20:28:57 q0rban Exp $
 
 /**
  * @file
@@ -19,12 +19,7 @@ function region_manager_settings_form() {
     '#default_value' => variable_get('region_manager_block_name', 'Block'),
   );
 
-  $form = system_settings_form($form);
-
-  // Uncomment and update the callback to override the default system settings submit handler.
-  // $form['#submit'] = array('_settings_form_submit');
-
-  return $form;
+  return system_settings_form($form);
 }
 
 /**
@@ -43,7 +38,7 @@ function region_manager_regions_form() {
 
   foreach($themes as $theme) {
     $key = 'region_manager_regions_'. $theme->name;
-    $settings = variable_get($key, array());
+    $settings = region_manager_regions_variable_get($theme->name);
 
     if ($theme->status) {
       $form[$key] = array(
@@ -91,7 +86,14 @@ function region_manager_blocks_form(&$form_state, $theme_key) {
 
   $form['regions']['#tree'] = TRUE;
 
+  $storage = REGION_MANAGER_STORAGE_NORMAL;
+
   foreach(array_keys($regions) as $region) {
+    // Check the storage on this region.
+    if ($records[$region]['storage'] > $storage) {
+      $storage = $records[$region]['storage'];
+    }
+
     // Now build each module form.
     foreach($all_blocks as $module => $blocks) {
       // Add the label for this module to the block_names column.
@@ -144,10 +146,20 @@ function region_manager_blocks_form(&$form_state, $theme_key) {
 
   $form['submit'] = array('#type' => 'submit', '#value' => t('Submit'));
 
+  switch($storage) {
+    case REGION_MANAGER_STORAGE_OVERRIDE:
+      $form['reset'] = array('#type' => 'submit', '#value' => t('Reset'));
+      break;
+
+    case REGION_MANAGER_STORAGE_DEFAULT:
+      drupal_set_message(t('These regions are currently using default storage. Any changes submitted here will override the default values.'), 'warning');
+      $form['submit']['#value'] = t('Override');
+      break;
+  }
+
   return $form;
 }
- 
- 
+
 /**
  * Submit handler for region_manager_blocks_form
  */
@@ -155,44 +167,51 @@ function region_manager_blocks_form_submit($form, &$form_state) {
   $regions = $form_state['values']['regions'];
   $theme_key = $form['#theme_key'];
 
-  foreach($regions as $region => $record) {
-    // Set up the region and theme key for this record.
-    $record['region'] = $region;
-    $record['theme_key'] = $theme_key;
-
-    // Now go through the modules.
-    foreach($record['modules'] as $module => $module_val) {
-      foreach($record['blocked_blocks'][$module] as $delta => $block_val) {
-        // We were using the [module][delta] structure to ease in theming, but we
-        // need it to be set with just a module:delta key, so let's do that now.
-        $key = $module .':'. $delta;
-        $record['blocked_blocks'][$key] = $block_val;
-
-        // Now we switch through the $module_val to determine what needs to be done.
-        switch($module_val) {
-          case REGION_MANAGER_ALL_ENABLED:
-            // All are enabled, so unset all.
-            unset($record['blocked_blocks'][$key]);
-            break;
-
-          case REGION_MANAGER_CUSTOM:
-            // We don't want to save the checked blocks, only unchecked blocks.
-            if ($block_val) {
+  // If we're resetting, delete all from the db with this theme_key.
+  if ($form_state['values']['op'] == t('Reset')) {
+    $sql = "DELETE FROM {region_manager_regions} WHERE theme_key = '%s'";
+    db_query($sql, $theme_key);
+  }
+  else {
+    foreach($regions as $region => $record) {
+      // Set up the region and theme key for this record.
+      $record['region'] = $region;
+      $record['theme_key'] = $theme_key;
+  
+      // Now go through the modules.
+      foreach($record['modules'] as $module => $module_val) {
+        foreach($record['blocked_blocks'][$module] as $delta => $block_val) {
+          // We were using the [module][delta] structure to ease in theming, but we
+          // need it to be set with just a module:delta key, so let's do that now.
+          $key = $module .':'. $delta;
+          $record['blocked_blocks'][$key] = $block_val;
+  
+          // Now we switch through the $module_val to determine what needs to be done.
+          switch($module_val) {
+            case REGION_MANAGER_ALL_ENABLED:
+              // All are enabled, so unset all.
               unset($record['blocked_blocks'][$key]);
-            }
-            break;
-
-          case REGION_MANAGER_ALL_DISABLED:
-            // Nothing to do here, since we want all of them.
-            break;
+              break;
+  
+            case REGION_MANAGER_CUSTOM:
+              // We don't want to save the checked blocks, only unchecked blocks.
+              if ($block_val) {
+                unset($record['blocked_blocks'][$key]);
+              }
+              break;
+  
+            case REGION_MANAGER_ALL_DISABLED:
+              // Nothing to do here, since we want all of them.
+              break;
+          }
         }
+        // Unset this module's array since we resaved using the module:delta format.
+        unset($record['blocked_blocks'][$module]);
       }
-      // Unset this module's array since we resaved using the module:delta format.
-      unset($record['blocked_blocks'][$module]);
+      // Flip the array, as all we need are the keys at this point.
+      $record['blocked_blocks'] = implode(', ', array_keys($record['blocked_blocks']));
+      region_manager_region_save($record);
     }
-    // Flip the array, as all we need are the keys at this point.
-    $record['blocked_blocks'] = implode(', ', array_keys($record['blocked_blocks']));
-    region_manager_region_save($record);
   }
 
   cache_clear_all('region_manager:'. $theme_key, 'cache', TRUE);
@@ -244,4 +263,118 @@ function theme_region_manager_blocks_form($form) {
   $output .= drupal_render($form);
  
   return $output;
+}
+
+/**
+ * List of themes for 
+ */
+function region_manager_visibility_overview() {
+  $items = array();
+
+  foreach(list_themes() as $theme) {
+    if ($theme->status) {
+      $items[] = l(t($theme->info['name']), 'admin/settings/region_manager/visibility/'. $theme->name);
+    }
+  }
+
+  return theme('item_list', $items, t('Themes'), 'ul', array('class' => 'region-manager-visibility-overview'));
+}
+
+/**
+ * Visibility settings form.
+ */
+function region_manager_visibility_form(&$form_state, $theme_key) {
+  $form = array();
+  $first = TRUE;
+
+  foreach(region_manager_region_list($theme_key) as $region => $name) {
+    $key = $theme_key .':'. $region;
+    $record = $records[$region];
+
+    visibility_api_form($form, $key, 'region_manager');
+
+    $form['visibility_api'][$key]['#type'] = 'fieldset';
+    $form['visibility_api'][$key]['#title'] = $name;
+    $form['visibility_api'][$key]['#collapsible'] = TRUE;
+    $form['visibility_api'][$key]['#collapsed'] = !$first;
+
+    $first = FALSE;
+  }
+
+  visibility_api_form_prepare($form);
+
+  return $form;
+}
+
+/**
+ * Form to export region manager settings.
+ */
+function region_manager_export(&$form_state) {
+  $form = array();
+  $values = $_POST;
+
+  if ($values) {
+    return region_manager_export_results($values);
+  }
+
+  $form['themes']['#tree'] = TRUE;
+
+  foreach(system_theme_data() as $theme) {
+    $regions = array_filter(region_manager_regions_variable_get($theme->name));
+    if (!empty($regions)) {
+      $options[$theme->name] = $theme->info['name'];
+    }
+  }
+
+  $form['themes'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Themes'),
+    '#options' => $options,
+  );
+
+  $form['module_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Module name'),
+    '#description' => t('The short name of your module, used to prepend the hook.'),
+  );
+
+  $form['submit'] = array('#type' => 'submit', '#value' => t('Submit'));
+
+  return $form;
+}
+
+function region_manager_export_results($values) {
+  $form = $options = $export = array();
+  $themes = array_keys(array_filter($values['themes']));
+  $module_name = $values['module_name'] ? check_plain($values['module_name']) : 'hook';
+  $records = region_manager_regions_load_all();
+
+  foreach($records as $record) {
+    if (in_array($record['theme_key'], $themes)) {
+      unset($record['storage'], $record['rid']);
+      $export[$record['theme_key']][$record['region']] = $record;
+    }
+  }
+
+  $output  = "/**\n";
+  $output .= " * Implementation of hook_region_manager_defaults().\n";
+  $output .= " */\n";
+  $output .= "function {$module_name}_region_manager_defaults(" . '$theme_key' . " = NULL) {\n";
+  $output .= '  $records = array();' . "\n";
+  $output .= "\n";
+  $output .= '  $records = '. var_export($export, TRUE) .";\n";
+  $output .= "\n";
+  $output .= '  return $theme_key ? $records[$theme_key] : $records;';
+  $output .= "\n}";
+
+  $rows = substr_count($output, "\n") + 1;
+
+  $form['export'] = array(
+    '#type' => 'textarea',
+    '#resizable' => FALSE,
+    '#rows' => $rows,
+    '#default_value' => $output,
+  );
+
+  return $form;
 }

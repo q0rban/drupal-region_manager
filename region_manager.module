@@ -1,9 +1,11 @@
 <?php
-// $Id: region_manager.module,v 1.1.2.11 2009/05/27 16:53:34 q0rban Exp $
+// $Id: region_manager.module,v 1.1.2.20 2009/11/23 02:52:32 q0rban Exp $
 
 /**
- * @file
- *   Adds add/remove block controls to select regions.
+ * @file Region Manager Module.
+ *
+ * Built by Sprocket.
+ * http://sprocketcreative.com
  */
 
 /**
@@ -14,31 +16,43 @@ define('REGION_MANAGER_ALL_DISABLED', 1);
 define('REGION_MANAGER_CUSTOM', 2);
 
 /**
+ * Define storage methods.
+ */
+// Stored in the db.
+define('REGION_MANAGER_STORAGE_NORMAL', 0);
+// Stored in hook_region_manager_defaults().
+define('REGION_MANAGER_STORAGE_DEFAULT', 1);
+// Stored in hook_region_manager_defaults(), but overridden in the db.
+define('REGION_MANAGER_STORAGE_OVERRIDE', 2);
+
+/**
+ * Include some files right away.
+ */
+// Include Region Manager's API and helper functions.
+module_load_include('inc', 'region_manager', 'region_manager');
+// Include NodeBlock helpers.
+module_load_include('inc', 'region_manager', 'region_manager.nodeblock');
+
+/**
  * Implementation of hook_help().
  */
 function region_manager_help($path, $arg) {
-  global $theme_info;
-
   switch ($path) {
     case 'admin/settings/region_manager/regions':
       return t('Please select for each theme which regions you would like to have region manager available on.');
 
     case 'admin/build/region_manager/%/%':
-      if (empty($theme_info)) {
-        init_theme();
-      }
-
+      $theme_key = $arg[3];
       $region = $arg[4];
       $path = _region_manager_path_name($_REQUEST['destination']);
 
       $t_args = array(
-        '@region' => $theme_info->info['regions'][$region],
+        '@region' => region_manager_region_title($theme_key, $region),
         '%path' => _region_manager_path_name($path),
-        '@nodeblock' => function_exists('nodeblock_block') ? ' create new,' : '',
         '@block' => _region_manager_block_name(),
       );
 
-      return t('You are managing the @region as it displays on %path. Add existing,@nodeblock remove, disable @blocks, or drag and drop to reorder them.', $t_args);
+      return t('You are managing the @region as it displays on %path. Add existing, create new, remove, disable @blocks, or drag and drop to reorder them.', $t_args);
   }
 }
 
@@ -47,21 +61,29 @@ function region_manager_help($path, $arg) {
  */
 function region_manager_init() {
   if (user_access('manage regions')) {
-    global $theme_key;
-
-    init_theme();
-
     // Add css and js.
     $path = drupal_get_path('module', 'region_manager');
     drupal_add_css($path .'/region_manager.css');
+  }
+}
+
+/**
+ * Implementation of hook_preprocess_page().
+ */
+function region_manager_preprocess_page(&$vars) {
+  if (user_access('manage regions')) {
+    global $theme_key;
 
     // Add the menus.
-    $regions = variable_get('region_manager_regions_'. $theme_key, array());
+    $regions = region_manager_regions_variable_get($theme_key);
     if (!empty($regions)) {
       foreach($regions as $region => $value) {
-        if ($value) {
-          $menu = theme('region_manager_region_menu', $theme_key, $region);
-          drupal_set_content($region, $menu);
+        if (
+          $value && 
+          isset($vars[$region]) && // Ensure this theme has the region ($regions may be from a base theme).
+          (!function_exists('visibility_api_visible') || visibility_api_visible($theme_key .':'. $region, 'region_manager'))
+        ) {
+          $vars[$region] = theme('region_manager_region_menu', $theme_key, $region) . $vars[$region];
         }
       }
     }
@@ -103,6 +125,22 @@ function region_manager_menu() {
     'weight' => -10,
   );
 
+  if (function_exists('visibility_api_visible')) {
+    $items['admin/settings/region_manager/visibility'] = array(
+      'title' => 'Visibility',
+      'description' => 'Configure visibility',
+      'page callback' => 'region_manager_visibility_overview',
+      'access arguments' => array('administer region manager'),
+      'file' => 'region_manager.admin.inc',
+      'type' => MENU_LOCAL_TASK,
+    );
+    $items['admin/settings/region_manager/visibility/list'] = array(
+      'title' => 'List',
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'weight' => -10,
+    );
+  }
+
   foreach(list_themes() as $theme) {
     if ($theme->status) {
       $items['admin/settings/region_manager/regions/'. $theme->name] = array(
@@ -114,8 +152,29 @@ function region_manager_menu() {
         'file' => 'region_manager.admin.inc',
         'type' => MENU_LOCAL_TASK,
       );
+      if (function_exists('visibility_api_visible')) {
+        $items['admin/settings/region_manager/visibility/'. $theme->name] = array(
+          'title' => $theme->info['name'],
+          'description' => 'Configure visibility',
+          'page callback' => 'drupal_get_form',
+          'page arguments' => array('region_manager_visibility_form', 4),
+          'access arguments' => array('administer region manager'),
+          'file' => 'region_manager.admin.inc',
+          'type' => MENU_LOCAL_TASK,
+        );
+      }
     }
   }
+  $items['admin/settings/region_manager/regions/export'] = array(
+    'title' => 'Export',
+    'description' => 'Configure region manager settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('region_manager_export'),
+    'access arguments' => array('administer region manager'),
+    'file' => 'region_manager.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 99,
+  );
 
   $items['admin/build/region_manager/%/%'] = array(
     'title callback' => 'region_manager_region_title',
@@ -168,7 +227,7 @@ function region_manager_theme() {
   $items['region_manager_region_menu'] = array(
     'arguments' => array('theme_key' => NULL, 'region' => NULL),
   );
-  $items['region_manager_nodeblock_menu'] = array(
+  $items['region_manager_create_menu'] = array(
     'arguments' => array('links' => NULL),
   );
   $items['region_manager_manage_form'] = array(
@@ -181,63 +240,21 @@ function region_manager_theme() {
 }
 
 /**
- * Implementation of hook_form_alter().
- */
-function region_manager_form_alter(&$form, $form_state, $form_id) {
-  if (function_exists('nodeblock_block') && $form['#id'] == 'node-form' && variable_get('nodeblock_'. $form['type']['#value'], 0) && !$form['nid']['#value']) {
-    if (($theme_key = arg(3)) && ($region = arg(4)) && ($path = $_REQUEST['destination'])) {
-      $frontpage = variable_get('site_frontpage', 'node');
-      $path = ($path == $frontpage) ? '<front>' : $path;
-
-      $form['region_manager'] = array(
-        '#tree' => TRUE,
-      );
-      $form['region_manager']['theme_key'] = array(
-        '#type' => 'hidden',
-        '#value' => $theme_key,
-      );
-      $form['region_manager']['region'] = array(
-        '#type' => 'hidden',
-        '#value' => $region,
-      );
-      $form['region_manager']['path'] = array(
-        '#type' => 'hidden',
-        '#value' => $path,
-      );
-    }
-  }
-}
-
-/**
  * Implementation of hook_nodeapi().
  */
 function region_manager_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
-  if ($op == 'insert' && function_exists('nodeblock_block') && $node->region_manager) {
-    _block_rehash();
-    db_query("UPDATE {blocks} SET status = 1,  region = '%s', visibility = 1, pages = '%s' WHERE module = 'nodeblock' AND delta = '%s' AND theme = '%s'", $node->region_manager['region'], $node->region_manager['path'], $node->nid, $node->region_manager['theme_key']);
+  if ($op == 'insert' && $node->region_manager) {
+    // Rehash the blocks for this theme key.
+    _region_manager_block_rehash($node->region_manager['theme_key']);
+
+    // Set up the path, in case this was a frontpage
+    $path = $node->region_manager['path'];
+    $frontpage = variable_get('site_frontpage', 'node');
+    $node->region_manager['path'] = ($path == $frontpage) ? '<front>' : $path;
+
+    // Insert the block into blocks table.
+    db_query("UPDATE {blocks} SET status = 1,  region = '%s', visibility = -1, pages = '%s' WHERE module = '%s' AND delta = '%s' AND theme = '%s'", $node->region_manager['region'], $node->region_manager['path'], $node->region_manager['module'], $node->nid, $node->region_manager['theme_key']);
   }
-}
-
-/**
- * Get a list of available regions from a specified theme.
- *
- * @param $theme_key
- *   The name of a theme.
- * @return
- *   An array of regions in the form $region['name'] = 'description'.
- */
-function region_manager_region_list($theme_key) {
-  static $region_list = array();
-
-  if (empty($region_list)) {
-    $settings = variable_get('region_manager_regions_'. $theme_key, array());
-    if (!empty($settings)) {
-      $regions = system_region_list($theme_key);
-      $region_list = array_intersect_key($regions, array_filter($settings));
-    }
-  }
-
-  return $region_list;
 }
 
 /**
@@ -258,293 +275,4 @@ function theme_region_manager_region_menu($theme_key, $region) {
   $link = l(t(region_manager_region_title($theme_key, $region)), "admin/build/region_manager/$theme_key/$region", array('query' => $dest, 'attributes' => array('title' => t('Manage this region'))));
 
   return "<div class='region-manager-menu'>$link</div>\n";
-}
-
-/**
- * Loader function for regions by theme or rid.
- *
- * @param $theme_key
- *   A string containing the name of the theme.
- * @param $reset
- *   Boolean, if TRUE the cache will be flushed.
- * @return
- *   A single record in array format, or FALSE if none matched the incoming ID.
- */
-function region_manager_regions_load($theme_key, $reset = FALSE) {
-  static $records = array();
-
-  $cache_key = 'region_manager:'. $theme_key;
-
-  if ($reset) {
-    cache_clear_all($cache_key, 'cache');
-    $records = array();
-  }
-
-  if (!empty($records)) {
-    return $records;
-  }
-
-  if (($cache = cache_get($cache_key, 'cache')) && is_array($cache->data)) {
-    $records = $cache->data;
-  }
-  else {
-    $sql = "SELECT * FROM {region_manager_regions} WHERE theme_key = '%s'";
-    $result = db_query($sql, $theme_key);
-  
-    while ($record = db_fetch_array($result)) {
-      $record['modules'] = unserialize($record['modules']);
-      $record['blocked_blocks'] = explode(', ', $record['blocked_blocks']);
-      $records[$record['region']] = $record;
-    }
-    cache_set($cache_key, $records);
-  }
-
-  return $records;
-}
-
-/**
- * Public loader function for the full collection of records.
- *
- * @return
- *   An array of all records, keyed by id.
- */
-function region_manager_regions_load_all() {
-  $sql = 'SELECT * FROM {region_manager_regions} ORDER BY rid ASC';
-  $result = db_query($sql);
-
-  $records = array();
-  while ($record = db_fetch_array($result)) {
-    $record['modules'] = unserialize($record['modules']);
-    $records[$record['rid']] = $record;
-  }
-  return $records;
-}
-
-/**
- * Inserts a new record, or updates an existing one.
- *
- * @param $region
- *   A record to be saved.
- * @return
- *   The saved record.
- */
-function region_manager_region_save($region) {
-  if (isset($region['rid'])) {
-    drupal_write_record('region_manager_regions', $region, 'rid');
-  }
-  else {
-    drupal_write_record('region_manager_regions', $region);
-  }
-  return $region;
-}
-
-/**
- * Deletes a record, given its unique ID.
- *
- * @param $rid
- *   An integer containing the ID of a record.
- */
-function region_manager_region_delete($rid) {
-  $sql = "DELETE FROM {region_manager_regions} WHERE rid = %d";
-  db_query($sql, $rid);
-}
-
-/**
- * Loads all available blocks organized by region.
- */
-function region_manager_blocks_load_all($theme_key, $region = NULL) {
-  static $all_blocks = NULL;
-  static $records = NULL;
-
-  $blocks = array();
-
-  // Load the blocks and regions if we haven't yet.
-  if (is_null($all_blocks)) {
-    $all_blocks = _region_manager_block_rehash($theme_key);
-  }
-  if (is_null($records)) {
-    // Load all regions for this theme, so we don't have to reload for each region.
-    $records = region_manager_regions_load($theme_key);
-  }
-
-  // Might as well quit if we don't have any blocks.
-  if (empty($all_blocks)) {
-    return;
-  }
-
-  if (is_null($region)) {
-    foreach(array_keys(region_manager_region_list($theme_key)) as $region) {
-      $blocks[$region] = _region_manager_blocks_filter($region, $all_blocks, $records[$region]);
-    }
-  }
-  else {
-    $blocks = _region_manager_blocks_filter($region, $all_blocks, $records[$region]);
-  }
-
-  return $blocks;
-}
-
-/**
- * Helper function to filter all enabled and (available) disabled
- * blocks for a particular region.
- */
-function _region_manager_blocks_filter($region, $blocks = array(), $record = array()) {
-  $output = array();
-
-  foreach($blocks as $module => $modblocks) {
-    if (is_array($modblocks)) {
-
-      // If they're all disabled for this module, go on to the next module.
-      if ($record['modules'][$module] == REGION_MANAGER_ALL_DISABLED) {
-        continue;
-      }
-
-      // Otherwise, let's parse through each block.
-      else {
-        foreach($modblocks as $delta => $block) {
-          if ($block['status']) {
-            // Only add it to active if it's a part of this region.
-            if ($block['region'] == $region) {
-              $output[] = $block;
-            }
-          }
-          else {
-            // Check to see if we're using custom availability for this module. 
-            if ($record['modules'][$module] == REGION_MANAGER_CUSTOM) {
-              $key = $module .':'. $delta;
-              // Is this block 'blocked'?
-              if (!in_array($key, $record['blocked_blocks'])) {
-                $output[] = $block;
-              }
-            }
-            // Otherwise add all blocks for this module.
-            else {
-              $output[] = $block;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return $output;
-}
-
-/**
- * Helper function to assemble the blocks
- */
-function _region_manager_block_rehash($theme_key) {
-  $blocks = array();
- 
-  $result = db_query("SELECT * FROM {blocks} WHERE theme = '%s'", $theme_key);
-  $old_blocks = array();
-  while ($old_block = db_fetch_array($result)) {
-    $old_blocks[$old_block['module']][$old_block['delta']] = $old_block;
-  }
-
-  $blocks = array();
-  // Valid region names for the theme.
-  $regions = system_region_list($theme_key);
-
-  foreach (module_list() as $module) {
-    $module_blocks = module_invoke($module, 'block', 'list');
-    if ($module_blocks) {
-      foreach ($module_blocks as $delta => $block) {
-        if (empty($old_blocks[$module][$delta])) {
-          // If it's a new block, add identifiers.
-          $block['module'] = $module;
-          $block['delta']  = $delta;
-          $block['theme']  = $theme_key;
-          if (!isset($block['pages'])) {
-            // {block}.pages is type 'text', so it cannot have a
-            // default value, and not null, so we need to provide
-            // value if the module did not.
-            $block['pages']  = '';
-          }
-          // Add defaults and save it into the database.
-          drupal_write_record('blocks', $block);
-          // Set region to none if not enabled.
-          $block['region'] = $block['status'] ? $block['region'] : BLOCK_REGION_NONE;
-          // Add to the list of blocks we return.
-          $blocks[$module][$delta] = $block;
-        }
-        else {
-          // If it's an existing block, database settings should overwrite
-          // the code. But aside from 'info' everything that's definable in
-          // code is stored in the database and we do not store 'info', so we
-          // do not need to update the database here.
-          // Add 'info' to this block.
-          $old_blocks[$module][$delta]['info'] = $block['info'];
-          // If the region name does not exist, disable the block and assign it to none.
-          if (!empty($old_blocks[$module][$delta]['region']) && !isset($regions[$old_blocks[$module][$delta]['region']])) {
-            drupal_set_message(t('The @block %info was assigned to the invalid region %region and has been disabled.', array('@block' => _region_manager_block_name(), '%info' => $old_blocks[$module][$delta]['info'], '%region' => $old_blocks[$module][$delta]['region'])), 'warning');
-            $old_blocks[$module][$delta]['status'] = 0;
-            $old_blocks[$module][$delta]['region'] = BLOCK_REGION_NONE;
-          }
-          else {
-            $old_blocks[$module][$delta]['region'] = $old_blocks[$module][$delta]['status'] ? $old_blocks[$module][$delta]['region'] : BLOCK_REGION_NONE;
-          }
-          // Add this block to the list of blocks we return.
-          $blocks[$module][$delta] = $old_blocks[$module][$delta];
-          // Remove this block from the list of blocks to be deleted.
-          unset($old_blocks[$module][$delta]);
-        }
-      }
-    }
-  }
-
-  // Remove blocks that are no longer defined by the code from the database.
-  foreach ($old_blocks as $module => $old_module_blocks) {
-    foreach ($old_module_blocks as $delta => $block) {
-      db_query("DELETE FROM {blocks} WHERE module = '%s' AND delta = '%s' AND theme = '%s'", $module, $delta, $theme_key);
-    }
-  }
-  return $blocks;
-}
-
-/**
- * Helper function to determine if the block is visible for a certain path.
- *
- * @return
- *   Boolean FALSE if it's not visible, otherwise a string of the path.
- */
-function _region_manager_block_check_visibility($block, $path = NULL) {
-  if ($block['visibility'] == 1) {
-    $path = is_null($path) ? drupal_get_path_alias($_GET['q']) : $path;
-    // Compare with the internal and path alias (if any).
-    $page_match = drupal_match_path($path, $block['pages']);
-    if ($path != $_GET['q']) {
-      $page_match = $page_match || drupal_match_path($_GET['q'], $block['pages']);
-    }
-  }
-  return $page_match ? $path : FALSE;
-}
-
-/**
- * Helper function to display the custom block name.
- *
- * @param $name
- *   String designating upper or lower case.
- */
-function _region_manager_block_name($case = 'lower') {
-  static $name;
-
-  if (empty($name)) {
-    $name = variable_get('region_manager_block_name', 'Block');
-  }
-
-  if ($case == 'lower') {
-    return strtolower($name);
-  }
-  return ucfirst($name);
-}
-
-/**
- * Helper function to output a path name or alias.
- */
-function _region_manager_path_name($path) {
-  $frontpage = variable_get('site_frontpage', 'node');
-  $alias = ($path == $frontpage) ? t('home page') : drupal_get_path_alias($path);
-
-  return $alias;
 }

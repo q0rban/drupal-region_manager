@@ -1,4 +1,4 @@
-/* $Id: region_manager.css,v 1.1.2.6 2009/05/26 19:35:14 q0rban Exp $ */
+/* $Id: region_manager.css,v 1.1.2.8 2009/11/23 02:52:32 q0rban Exp $ */
 
 /***************************
   Region Manager Menu link 
@@ -53,10 +53,10 @@ div.region-manager-menu:hover {
 }
 
 /***************************
-      NodeBlock Menu 
+        Create Menu 
 ***************************/
 
-div.region-manager-nodeblock-menu div.item-list-wrapper {
+div.region-manager-create-menu div.item-list-wrapper {
 	display: none;
 }
 
@@ -86,7 +86,7 @@ html.js #region-manager-manage-form td.operations {
 }
 
 #region-manager-manage-form td.operations li a,
-a.region-manager-nodeblock-menu-link {
+a.region-manager-create-menu-link {
 	display: block;
 	float: right;
 	text-align: left;
@@ -98,7 +98,7 @@ a.region-manager-nodeblock-menu-link {
 }
 
 #region-manager-manage-form td.operations li a:hover,
-a.region-manager-nodeblock-menu-link:hover {
+a.region-manager-create-menu-link:hover {
 	background-position: 100% 0;
 }
 
@@ -122,7 +122,7 @@ a.region-manager-nodeblock-menu-link:hover {
 	background-image: url(images/btn_remove.png);
 }
 
-a.region-manager-nodeblock-menu-link {
+a.region-manager-create-menu-link {
 	float: none;
 	width: 89px;
 	background-image: url(images/btn_create.png);
@@ -145,8 +145,8 @@ a.region-manager-nodeblock-menu-link {
 tr.rm-state-populated,
 #region-manager-manage-form td.weight,
 #region-manager-manage-form td.state,
-html.js #region-manager-manage-form div.region-manager-block-title-wrapper,
-#region-manager-manage-form div.region-manager-block-title-wrapper div.form-radios {
+html.js #region-manager-manage-form div.region-manager-block-config-wrapper,
+#region-manager-manage-form div.region-manager-block-config-wrapper div.form-radios {
 	display: none;
 }
 
@@ -154,19 +154,19 @@ html.js #region-manager-manage-form td.title-link a {
 	display: inline;
 }
 
-html.js #region-manager-manage-form div.region-manager-block-title-wrapper div.form-radios {
+html.js #region-manager-manage-form div.region-manager-block-config-wrapper div.form-radios {
 	display: block;
 	margin-left: 24px;
 }
 
-.region-manager-block-title-wrapper div.form-item {
+.region-manager-block-config-wrapper div.form-item {
 	background-color: transparent;
 	margin-left: 24px;
 	background-image: none;
 	margin-bottom: 12px;
 }
 
-.region-manager-block-title-wrapper input.region-manager-manage-form-title {
+.region-manager-block-config-wrapper input.region-manager-manage-form-title {
 }
 
 #region-manager-manage-form td.title-link {
@@ -179,7 +179,7 @@ html.js #region-manager-manage-form div.region-manager-block-title-wrapper div.f
 	margin-left: 0;
 }
 
-div.region-manager-nodeblock-menu {
+div.region-manager-create-menu {
 	padding: 12px;
 	border: 3px solid #a3a3a3;
 	margin-top: 18px;
@@ -187,7 +187,7 @@ div.region-manager-nodeblock-menu {
 	background: #f2f2f2 url(images/bg_gradient-tall.png) repeat-x 0 top;
 }
 
-.region-manager-nodeblock-menu h4 {
+.region-manager-create-menu h4 {
 	margin: 2px 0 0;
 	padding: 0;
 }
@@ -204,7 +204,7 @@ td.rm-state {
 	padding-top: 12px;
 }
 
-#region-manager-active-path-nodeblock-wrapper div.table-wrapper {
+#region-manager-active-path-wrapper div.table-wrapper {
 	border-width: 3px;
 	border-color: #808080;
 }
@@ -226,7 +226,7 @@ div.table-wrapper {
 	padding-bottom: 4px;
 }
 
-#region-manager-active-path-nodeblock-wrapper .region-manager-nodeblock-menu div.item-list-wrapper {
+#region-manager-active-path-wrapper .region-manager-create-menu div.item-list-wrapper {
 	border: 1px solid #e9e9e9;
 	padding: 12px;
 	background-color: white;
@@ -235,11 +235,11 @@ div.table-wrapper {
 	color: #464646;
 }
 
-.region-manager-nodeblock-menu ul {
+.region-manager-create-menu ul {
 	padding: 0 !important;
 }
 
-.region-manager-nodeblock-menu ul li {
+.region-manager-create-menu ul li {
 	border-top: 1px dotted #c8c8c8;
 	margin: 0;
 	list-style-type: none;
@@ -247,7 +247,7 @@ div.table-wrapper {
 	padding: 0;
 }
 
-.region-manager-nodeblock-menu ul li a {
+.region-manager-create-menu ul li a {
 	line-height: 1em;
 	display: block;
 	padding-top: 9px;
@@ -256,7 +256,7 @@ div.table-wrapper {
 	background: url(images/arrow.png) no-repeat 0 10px;
 }
 
-.region-manager-nodeblock-menu ul li a:hover {
+.region-manager-create-menu ul li a:hover {
 	background: #f2f2f2 url(images/bg_gradient-short.png) repeat-x 0 -2px;
 	text-decoration: none;
 }

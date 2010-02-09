@@ -1,4 +1,4 @@
-// $Id: region_manager.js,v 1.1.2.5 2009/05/21 16:59:23 q0rban Exp $
+// $Id: region_manager.js,v 1.1.2.7 2009/11/23 02:52:32 q0rban Exp $
 
 /**
  * Show/hide form elements for editing a block title.
@@ -42,7 +42,7 @@ Drupal.behaviors.regionManagerOperations = function() {
     var op = $(this).attr('class');
     var rowClass = $(this).parents('ul').attr('class');
     var row = $('tr.' + rowClass);
-    var configWrapper = $('div.region-manager-block-title-wrapper', row);
+    var configWrapper = $('div.region-manager-block-config-wrapper', row);
     var tableDragObj = Drupal.tableDrag['region-manager-blocks-active_path'];
     var tables = $('#region-manager-manage-form table');
 
@@ -111,9 +111,9 @@ Drupal.behaviors.regionManagerOperations = function() {
 /**
  * Perform actions from operation links
  */
-Drupal.behaviors.regionManagerNodeBlock = function() {
-  $('a.region-manager-nodeblock-menu-link').click(function() {
-    var typesList = $('div.region-manager-nodeblock-menu div.item-list-wrapper');
+Drupal.behaviors.regionManagerCreate = function() {
+  $('a.region-manager-create-menu-link').click(function() {
+    var typesList = $('div.region-manager-create-menu div.item-list-wrapper');
     if (typesList.is(':hidden')) {
       typesList.show('fast');
     }
