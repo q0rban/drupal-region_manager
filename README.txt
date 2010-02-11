@@ -1,4 +1,4 @@
-$Id: README.txt,v 1.1.2.1 2009/11/20 21:55:47 q0rban Exp $
+$Id: README.txt,v 1.2 2010/02/09 00:13:20 q0rban Exp $
 
 ********************************************************************************
 Region Manager provides a simple interface to manage blocks, and combined with

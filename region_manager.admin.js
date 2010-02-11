@@ -1,4 +1,4 @@
-// $Id: region_manager.admin.js,v 1.1.2.1 2009/05/15 19:09:07 q0rban Exp $
+// $Id: region_manager.admin.js,v 1.2 2010/02/09 00:13:20 q0rban Exp $
 
 $(function() {
   // Block administration page.

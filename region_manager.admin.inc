@@ -1,5 +1,5 @@
 <?php
-// $Id: region_manager.admin.inc,v 1.1.2.8 2009/08/26 20:28:57 q0rban Exp $
+// $Id: region_manager.admin.inc,v 1.2 2010/02/09 00:13:20 q0rban Exp $
 
 /**
  * @file

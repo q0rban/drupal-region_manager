@@ -1,4 +1,4 @@
-// $Id: region_manager.js,v 1.1.2.7 2009/11/23 02:52:32 q0rban Exp $
+// $Id: region_manager.js,v 1.2 2010/02/09 00:13:20 q0rban Exp $
 
 /**
  * Show/hide form elements for editing a block title.
